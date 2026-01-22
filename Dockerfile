@@ -1,23 +1,18 @@
-# Use Node with Puppeteer dependencies pre-installed
-FROM ghcr.io/puppeteer/puppeteer:latest
+FROM node:20-slim
 
-# Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (skip Puppeteer's bundled Chrome - we use the container's)
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
-
+# Install dependencies
 RUN npm ci --only=production
 
 # Copy application code
 COPY . .
 
-# Create snapshots and data directories
-RUN mkdir -p /app/snapshots /app/data
+# Create data directory
+RUN mkdir -p /app/data
 
 # Expose port
 EXPOSE 3000

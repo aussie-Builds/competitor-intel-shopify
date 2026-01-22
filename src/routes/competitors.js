@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { Competitor } from '../models/competitor.js';
 import { Page, COMMON_PAGES } from '../models/page.js';
-import { Snapshot } from '../models/snapshot.js';
 import { Change } from '../models/change.js';
 import { checkCompetitor, checkPage } from '../services/monitor.js';
 
@@ -208,21 +207,6 @@ router.post('/:competitorId/pages/:pageId/check', async (req, res) => {
 
     const result = await checkPage(req.params.pageId);
     res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get page screenshots
-router.get('/:competitorId/pages/:pageId/screenshots', (req, res) => {
-  try {
-    const snapshots = Snapshot.findLastTwoWithScreenshots(req.params.pageId);
-    const screenshots = snapshots.map(s => ({
-      id: s.id,
-      url: s.screenshot_path ? `/screenshots/${s.screenshot_path.split('/').pop()}` : null,
-      captured_at: s.captured_at
-    })).filter(s => s.url);
-    res.json(screenshots);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -12,7 +12,3 @@ services:
         sync: false
       - key: ALERT_EMAIL
         sync: false
-    disk:
-      name: snapshots
-      mountPath: /app/snapshots
-      sizeGB: 1

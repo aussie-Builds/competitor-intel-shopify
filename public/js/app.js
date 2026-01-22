@@ -1,7 +1,3 @@
-// State for screenshot comparison
-let currentScreenshots = { old: null, new: null };
-let showingBefore = false;
-let currentZoom = 100;
 let commonPages = [];
 let selectedQuickPages = new Set();
 let currentAddPageCompetitor = null;
@@ -123,7 +119,6 @@ function renderPages(competitorId, pages) {
       </div>
       <div class="page-actions">
         <button class="btn btn-secondary btn-small" onclick="checkPage(${competitorId}, ${p.id}, event)">Check</button>
-        <button class="btn btn-secondary btn-small" onclick="viewPageScreenshots(${competitorId}, ${p.id}, '${escapeHtml(p.label)}')">Screenshots</button>
         <button class="btn btn-danger btn-small" onclick="deletePage(${competitorId}, ${p.id}, '${escapeHtml(p.label)}')">×</button>
       </div>
     </div>
@@ -306,15 +301,9 @@ function closeChangeModal() {
   document.getElementById('change-modal').classList.remove('active');
 }
 
-function closeScreenshotModal() {
-  document.getElementById('screenshot-modal').classList.remove('active');
-  currentScreenshots = { old: null, new: null };
-}
-
 async function addCompetitor(event) {
   event.preventDefault();
 
-  const form = event.target;
   const name = document.getElementById('comp-name').value;
 
   // Collect pages from input rows
@@ -480,307 +469,25 @@ async function deletePage(competitorId, pageId, label) {
 
 async function showChangeDetail(changeId) {
   try {
-    const [changeRes, screenshotsRes] = await Promise.all([
-      fetch(`/api/changes/${changeId}`),
-      fetch(`/api/changes/${changeId}/screenshots`)
-    ]);
-
-    const change = await changeRes.json();
-    const screenshots = await screenshotsRes.json();
-
-    let screenshotBtn = '';
-    if (screenshots.old && screenshots.new) {
-      screenshotBtn = `<button class="btn btn-secondary" style="margin-top: 16px;" onclick="showChangeScreenshots(${changeId})">View Screenshot Comparison</button>`;
-    }
+    const res = await fetch(`/api/changes/${changeId}`);
+    const change = await res.json();
 
     const pageInfo = change.page_label ? ` - ${escapeHtml(change.page_label)}` : '';
 
     document.getElementById('change-detail').innerHTML = `
       <h2>Change Analysis</h2>
-      <p style="color: #86868b; margin-bottom: 8px;">${escapeHtml(change.competitor_name)}${pageInfo}</p>
-      <p style="color: #86868b; margin-bottom: 20px;">${formatDate(change.detected_at)}</p>
+      <p style="color: var(--text-tertiary); margin-bottom: 8px;">${escapeHtml(change.competitor_name)}${pageInfo}</p>
+      <p style="color: var(--text-tertiary); margin-bottom: 20px;">${formatDate(change.detected_at)}</p>
       <p><strong>Summary:</strong> ${escapeHtml(change.change_summary)}</p>
       <div style="margin-top: 20px;">
         <strong>AI Analysis:</strong>
         <div class="analysis-content">${escapeHtml(change.ai_analysis || 'No analysis available')}</div>
       </div>
-      ${screenshotBtn}
     `;
 
     document.getElementById('change-modal').classList.add('active');
   } catch (error) {
     alert('Failed to load change details');
-  }
-}
-
-async function viewPageScreenshots(competitorId, pageId, label) {
-  try {
-    const res = await fetch(`/api/competitors/${competitorId}/pages/${pageId}/screenshots`);
-    const screenshots = await res.json();
-
-    document.getElementById('screenshot-title').textContent = `Screenshots: ${label}`;
-
-    if (screenshots.length === 0) {
-      document.getElementById('screenshot-content').innerHTML = `
-        <div class="no-screenshots">
-          <p>No screenshots available yet.</p>
-          <p>Screenshots are captured when you check a page.</p>
-        </div>
-      `;
-      document.getElementById('screenshot-modal').classList.add('active');
-      return;
-    }
-
-    if (screenshots.length === 1) {
-      currentScreenshots = { old: null, new: screenshots[0] };
-    } else {
-      currentScreenshots = { old: screenshots[1], new: screenshots[0] };
-    }
-
-    setupScreenshotViewer();
-    document.getElementById('screenshot-modal').classList.add('active');
-  } catch (error) {
-    alert('Failed to load screenshots');
-  }
-}
-
-async function showChangeScreenshots(changeId) {
-  try {
-    closeChangeModal();
-
-    const res = await fetch(`/api/changes/${changeId}/screenshots`);
-    const screenshots = await res.json();
-
-    document.getElementById('screenshot-title').textContent = 'Screenshot Comparison';
-
-    currentScreenshots = {
-      old: screenshots.old,
-      new: screenshots.new
-    };
-
-    setupScreenshotViewer();
-    document.getElementById('screenshot-modal').classList.add('active');
-  } catch (error) {
-    alert('Failed to load screenshots');
-  }
-}
-
-function setupScreenshotViewer() {
-  const content = document.getElementById('screenshot-content');
-  currentZoom = 100;
-
-  if (!currentScreenshots.new) {
-    content.innerHTML = `
-      <div class="no-screenshots">
-        <p>No screenshots available.</p>
-      </div>
-    `;
-    return;
-  }
-
-  if (!currentScreenshots.old) {
-    content.innerHTML = `
-      <div class="screenshot-toolbar">
-        <div></div>
-        <div class="zoom-controls">
-          <button class="zoom-btn" onclick="zoomOut()">-</button>
-          <span class="zoom-level" id="zoom-level">100%</span>
-          <button class="zoom-btn" onclick="zoomIn()">+</button>
-          <button class="zoom-btn" onclick="resetZoom()">Reset</button>
-          <button class="open-fullsize" onclick="openFullSize('${currentScreenshots.new.url}')">
-            Open Full Size ↗
-          </button>
-        </div>
-      </div>
-      <div class="toggle-view">
-        <p style="color: #86868b; margin-bottom: 16px;">Only one snapshot available (no comparison yet)</p>
-        <div class="zoomable-container">
-          <img class="zoomable-img" id="single-img" src="${currentScreenshots.new.url}" alt="Screenshot" onclick="openFullSize('${currentScreenshots.new.url}')">
-        </div>
-        <p class="screenshot-date">Captured: ${formatDate(currentScreenshots.new.captured_at)}</p>
-      </div>
-    `;
-    return;
-  }
-
-  content.innerHTML = `
-    <div class="screenshot-toolbar">
-      <div class="screenshot-tabs">
-        <button class="tab-btn active" data-tab="slider" onclick="switchTab('slider')">Slider Compare</button>
-        <button class="tab-btn" data-tab="side-by-side" onclick="switchTab('side-by-side')">Side by Side</button>
-        <button class="tab-btn" data-tab="toggle" onclick="switchTab('toggle')">Toggle View</button>
-      </div>
-      <div class="zoom-controls">
-        <button class="zoom-btn" onclick="zoomOut()">-</button>
-        <span class="zoom-level" id="zoom-level">100%</span>
-        <button class="zoom-btn" onclick="zoomIn()">+</button>
-        <button class="zoom-btn" onclick="resetZoom()">Reset</button>
-        <button class="open-fullsize" onclick="openCurrentFullSize()">
-          Open Full Size ↗
-        </button>
-      </div>
-    </div>
-
-    <div class="screenshot-viewer" id="viewer-slider">
-      <div class="comparison-container">
-        <div class="zoomable-container" style="max-height: 75vh;">
-          <div class="comparison-wrapper" id="comparison-wrapper">
-            <img id="img-new" class="comparison-img zoomable-img" src="${currentScreenshots.new.url}" alt="After">
-            <div class="comparison-overlay" id="overlay">
-              <img id="img-old-overlay" class="comparison-img" src="${currentScreenshots.old.url}" alt="Before">
-            </div>
-            <input type="range" min="0" max="100" value="50" class="comparison-slider" id="comparison-slider">
-            <div class="slider-line" id="slider-line"></div>
-          </div>
-        </div>
-        <div class="comparison-labels">
-          <span class="label-before">Before (${formatDate(currentScreenshots.old.captured_at)})</span>
-          <span class="label-after">After (${formatDate(currentScreenshots.new.captured_at)})</span>
-        </div>
-        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 8px;">
-          <button class="btn btn-secondary btn-small" onclick="openFullSize('${currentScreenshots.old.url}')">Open Before ↗</button>
-          <button class="btn btn-secondary btn-small" onclick="openFullSize('${currentScreenshots.new.url}')">Open After ↗</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="screenshot-viewer hidden" id="viewer-side-by-side">
-      <div class="side-by-side">
-        <div class="screenshot-panel">
-          <h4>Before</h4>
-          <p class="screenshot-date">${formatDate(currentScreenshots.old.captured_at)}</p>
-          <div class="img-wrapper zoomable-container">
-            <img class="zoomable-img" src="${currentScreenshots.old.url}" alt="Before" onclick="openFullSize('${currentScreenshots.old.url}')" title="Click to open full size">
-          </div>
-        </div>
-        <div class="screenshot-panel">
-          <h4>After</h4>
-          <p class="screenshot-date">${formatDate(currentScreenshots.new.captured_at)}</p>
-          <div class="img-wrapper zoomable-container">
-            <img class="zoomable-img" src="${currentScreenshots.new.url}" alt="After" onclick="openFullSize('${currentScreenshots.new.url}')" title="Click to open full size">
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="screenshot-viewer hidden" id="viewer-toggle">
-      <div class="toggle-view">
-        <button class="btn btn-secondary" id="toggle-btn" onclick="toggleScreenshot()">Show Before</button>
-        <div class="zoomable-container" id="toggle-container">
-          <img id="img-toggle" class="zoomable-img" src="${currentScreenshots.new.url}" alt="Screenshot" onclick="openToggleFullSize()" title="Click to open full size">
-        </div>
-        <p class="screenshot-date" id="date-toggle">After: ${formatDate(currentScreenshots.new.captured_at)}</p>
-      </div>
-    </div>
-  `;
-
-  setupSlider();
-  showingBefore = false;
-}
-
-function setupSlider() {
-  const slider = document.getElementById('comparison-slider');
-  const overlay = document.getElementById('overlay');
-  const sliderLine = document.getElementById('slider-line');
-  const imgNew = document.getElementById('img-new');
-  const imgOldOverlay = document.getElementById('img-old-overlay');
-
-  if (!slider) return;
-
-  function updateSlider(value) {
-    overlay.style.width = value + '%';
-    sliderLine.style.left = value + '%';
-  }
-
-  slider.addEventListener('input', (e) => {
-    updateSlider(e.target.value);
-  });
-
-  imgNew.addEventListener('load', () => {
-    imgOldOverlay.style.width = imgNew.offsetWidth + 'px';
-  });
-
-  updateSlider(50);
-}
-
-function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === tab);
-  });
-
-  document.querySelectorAll('.screenshot-viewer').forEach(viewer => {
-    viewer.classList.add('hidden');
-  });
-
-  document.getElementById(`viewer-${tab}`).classList.remove('hidden');
-
-  if (tab === 'slider') {
-    setupSlider();
-  }
-}
-
-function toggleScreenshot() {
-  showingBefore = !showingBefore;
-  const img = document.getElementById('img-toggle');
-  const btn = document.getElementById('toggle-btn');
-  const dateLabel = document.getElementById('date-toggle');
-
-  if (showingBefore && currentScreenshots.old) {
-    img.src = currentScreenshots.old.url;
-    btn.textContent = 'Show After';
-    dateLabel.textContent = `Before: ${formatDate(currentScreenshots.old.captured_at)}`;
-  } else {
-    img.src = currentScreenshots.new.url;
-    btn.textContent = 'Show Before';
-    dateLabel.textContent = `After: ${formatDate(currentScreenshots.new.captured_at)}`;
-  }
-}
-
-function zoomIn() {
-  currentZoom = Math.min(currentZoom + 25, 300);
-  applyZoom();
-}
-
-function zoomOut() {
-  currentZoom = Math.max(currentZoom - 25, 50);
-  applyZoom();
-}
-
-function resetZoom() {
-  currentZoom = 100;
-  applyZoom();
-}
-
-function applyZoom() {
-  document.getElementById('zoom-level').textContent = currentZoom + '%';
-
-  document.querySelectorAll('.zoomable-img').forEach(img => {
-    img.style.transform = `scale(${currentZoom / 100})`;
-    img.style.transformOrigin = 'top left';
-  });
-
-  const wrapper = document.getElementById('comparison-wrapper');
-  if (wrapper) {
-    wrapper.style.transform = `scale(${currentZoom / 100})`;
-    wrapper.style.transformOrigin = 'top left';
-  }
-}
-
-function openFullSize(url) {
-  window.open(url, '_blank');
-}
-
-function openCurrentFullSize() {
-  if (currentScreenshots.new) {
-    window.open(currentScreenshots.new.url, '_blank');
-  }
-}
-
-function openToggleFullSize() {
-  if (showingBefore && currentScreenshots.old) {
-    window.open(currentScreenshots.old.url, '_blank');
-  } else if (currentScreenshots.new) {
-    window.open(currentScreenshots.new.url, '_blank');
   }
 }
 
@@ -806,7 +513,6 @@ document.addEventListener('keydown', (e) => {
     closeAddModal();
     closeAddPageModal();
     closeChangeModal();
-    closeScreenshotModal();
   }
 });
 
