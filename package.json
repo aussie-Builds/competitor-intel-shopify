@@ -1,0 +1,20 @@
+{
+  "name": "competitor-intel",
+  "version": "1.0.0",
+  "description": "AI-powered competitor monitoring tool",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "scrape": "node src/scripts/scrape.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "better-sqlite3": "^11.7.0",
+    "express": "^4.21.2",
+    "node-cron": "^3.0.3",
+    "puppeteer": "^24.2.0",
+    "resend": "^4.1.0"
+  },
+  "type": "module"
+}

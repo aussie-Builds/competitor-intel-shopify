@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Competitor Intel</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Competitor Intel</h1>
+      <p class="subtitle">AI-Powered Competitive Monitoring</p>
+    </header>
+
+    <div class="stats-bar" id="stats-bar">
+      <div class="stat">
+        <span class="stat-value" id="stat-competitors">-</span>
+        <span class="stat-label">Competitors</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-pages">-</span>
+        <span class="stat-label">Pages</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-changes-24h">-</span>
+        <span class="stat-label">Changes (24h)</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-changes-7d">-</span>
+        <span class="stat-label">Changes (7d)</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="openAddModal()">+ Add Competitor</button>
+      <button class="btn btn-secondary" onclick="checkAll()">Check All Now</button>
+    </div>
+
+    <section class="section">
+      <h2>Monitored Competitors</h2>
+      <div id="competitors-list" class="competitors-list"></div>
+    </section>
+
+    <section class="section">
+      <h2>Recent Changes</h2>
+      <div id="changes-list" class="changes-list"></div>
+    </section>
+  </div>
+
+  <!-- Add Competitor Modal -->
+  <div id="add-modal" class="modal">
+    <div class="modal-content modal-large">
+      <span class="close" onclick="closeAddModal()">&times;</span>
+      <h2>Add Competitor</h2>
+      <form id="add-form" onsubmit="addCompetitor(event)">
+        <div class="form-group">
+          <label for="comp-name">Competitor Name</label>
+          <input type="text" id="comp-name" name="name" required placeholder="e.g., Acme Corp">
+        </div>
+
+        <div class="form-group">
+          <label for="base-url">Base URL</label>
+          <input type="url" id="base-url" name="baseUrl" required placeholder="https://example.com">
+        </div>
+
+        <div class="form-group">
+          <label>Quick Add Pages</label>
+          <div class="quick-add-grid" id="quick-add-buttons"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Pages to Monitor</label>
+          <div id="pages-list" class="pages-input-list"></div>
+          <button type="button" class="btn btn-secondary btn-small" onclick="addPageInput()">+ Add Custom Page</button>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Add Competitor</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Page Modal (for existing competitors) -->
+  <div id="add-page-modal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeAddPageModal()">&times;</span>
+      <h2>Add Page</h2>
+      <p class="modal-subtitle" id="add-page-competitor-name"></p>
+      <form id="add-page-form" onsubmit="addPageToCompetitor(event)">
+        <input type="hidden" id="add-page-competitor-id">
+
+        <div class="form-group">
+          <label>Quick Add</label>
+          <div class="quick-add-grid" id="quick-add-page-buttons"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="page-url">Page URL</label>
+          <input type="url" id="page-url" name="url" required placeholder="https://example.com/pricing">
+        </div>
+        <div class="form-group">
+          <label for="page-label">Label</label>
+          <input type="text" id="page-label" name="label" placeholder="e.g., Pricing">
+        </div>
+        <button type="submit" class="btn btn-primary">Add Page</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Change Detail Modal -->
+  <div id="change-modal" class="modal">
+    <div class="modal-content modal-large">
+      <span class="close" onclick="closeChangeModal()">&times;</span>
+      <div id="change-detail"></div>
+    </div>
+  </div>
+
+  <!-- Screenshot Modal -->
+  <div id="screenshot-modal" class="modal">
+    <div class="modal-content modal-fullwidth">
+      <span class="close" onclick="closeScreenshotModal()">&times;</span>
+      <h2 id="screenshot-title">Screenshot Comparison</h2>
+      <div id="screenshot-content"></div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
