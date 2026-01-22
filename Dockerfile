@@ -16,8 +16,8 @@ RUN npm ci --only=production
 # Copy application code
 COPY . .
 
-# Create snapshots directory
-RUN mkdir -p /app/snapshots
+# Create snapshots and data directories
+RUN mkdir -p /app/snapshots /app/data
 
 # Expose port
 EXPOSE 3000

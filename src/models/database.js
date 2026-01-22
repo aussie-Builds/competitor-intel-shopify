@@ -1,7 +1,12 @@
 import Database from 'better-sqlite3';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
+import { mkdirSync } from 'fs';
 
 const dbPath = resolve(process.cwd(), 'data', 'competitor-intel.db');
+
+// Ensure data directory exists
+mkdirSync(dirname(dbPath), { recursive: true });
+
 const db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');
