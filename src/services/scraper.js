@@ -16,15 +16,31 @@ export class Scraper {
 
   async init() {
     if (!this.browser) {
-      this.browser = await puppeteer.launch({
-        headless: true,
+      const launchOptions = {
+        headless: 'new',
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
-          '--disable-gpu'
+          '--disable-gpu',
+          '--disable-software-rasterizer',
+          '--disable-extensions',
+          '--disable-background-networking',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+          '--mute-audio'
         ]
-      });
+      };
+
+      // Use system Chrome if PUPPETEER_EXECUTABLE_PATH is set (for Render/Docker)
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+      }
+
+      this.browser = await puppeteer.launch(launchOptions);
     }
     return this;
   }
