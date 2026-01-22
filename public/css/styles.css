@@ -11,10 +11,10 @@
   --text-secondary: #475569;
   --text-tertiary: #94a3b8;
 
-  --accent-primary: #6366f1;
-  --accent-primary-hover: #4f46e5;
-  --accent-secondary: #8b5cf6;
-  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --accent-primary: #06b6d4;
+  --accent-primary-hover: #0891b2;
+  --accent-secondary: #0e7490;
+  --accent-gradient: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
 
   --success: #10b981;
   --success-bg: #ecfdf5;
@@ -31,7 +31,7 @@
   --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.05), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.05);
   --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
-  --shadow-glow: 0 0 40px rgba(99, 102, 241, 0.15);
+  --shadow-glow: 0 0 40px rgba(6, 182, 212, 0.15);
   --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 6px 16px rgba(15, 23, 42, 0.06);
   --shadow-card-hover: 0 4px 12px rgba(15, 23, 42, 0.08), 0 16px 32px rgba(15, 23, 42, 0.1);
 
@@ -185,12 +185,12 @@ header h1 {
 .btn-primary {
   background: var(--accent-gradient);
   color: white;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.35), inset 0 1px 0 rgba(255,255,255,0.15);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.4), inset 0 1px 0 rgba(255,255,255,0.15);
 }
 
 .btn-primary:active {
@@ -268,7 +268,7 @@ header h1 {
 
 .competitor-card:hover {
   box-shadow: var(--shadow-card-hover);
-  border-color: rgba(99, 102, 241, 0.15);
+  border-color: rgba(6, 182, 212, 0.15);
 }
 
 .competitor-header {
@@ -310,7 +310,7 @@ header h1 {
   font-size: 0.8125rem;
   font-weight: 600;
   color: white;
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 2px 6px rgba(6, 182, 212, 0.25);
 }
 
 .expand-icon {
@@ -327,7 +327,7 @@ header h1 {
 }
 
 .competitor-card:hover .expand-icon {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(6, 182, 212, 0.1);
   color: var(--accent-primary);
 }
 
@@ -385,8 +385,8 @@ header h1 {
 }
 
 .page-item:hover {
-  border-color: rgba(99, 102, 241, 0.2);
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(139, 92, 246, 0.03) 100%);
+  border-color: rgba(6, 182, 212, 0.2);
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.03) 0%, rgba(8, 145, 178, 0.03) 100%);
 }
 
 .page-item:last-child {
@@ -483,7 +483,7 @@ header h1 {
   background: var(--accent-gradient);
   color: white;
   border-color: transparent;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
 }
 
 .quick-add-btn svg {
@@ -516,7 +516,7 @@ header h1 {
 .page-input-row input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
 }
 
 .page-input-row .remove-btn {
@@ -740,7 +740,7 @@ header h1 {
 .form-group input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1);
 }
 
 .form-group input::placeholder {
@@ -985,7 +985,7 @@ header h1 {
   height: 44px;
   background: var(--accent-gradient);
   border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
 }
 
 .slider-line::after {
