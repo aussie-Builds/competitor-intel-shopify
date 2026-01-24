@@ -167,8 +167,8 @@ export async function checkCompetitor(competitorId) {
   };
 }
 
-export async function checkAllCompetitors() {
-  const competitors = Competitor.getAllWithPages(true);
+export async function checkAllCompetitors(userId = null) {
+  const competitors = Competitor.getAllWithPages(true, userId);
   const allResults = [];
   let totalPages = 0;
   let totalChanges = 0;
@@ -188,6 +188,81 @@ export async function checkAllCompetitors() {
       console.log(`Checking ${competitor.name} (${competitor.pages.length} pages)...`);
 
       for (const page of competitor.pages) {
+        totalPages++;
+        try {
+          const result = await checkPageWithScraper(page, competitor.name, scraper);
+          allResults.push({
+            ...result,
+            competitor_name: competitor.name
+          });
+          if (result.change) totalChanges++;
+        } catch (error) {
+          console.error(`Error checking ${competitor.name} - ${page.label}:`, error.message);
+          allResults.push({
+            page,
+            competitor_name: competitor.name,
+            error: error.message
+          });
+        }
+      }
+    }
+  } finally {
+    await scraper.close();
+  }
+
+  const changes = allResults
+    .filter(r => r.change)
+    .map(r => ({
+      ...r.change,
+      competitor_name: r.competitor_name,
+      page_label: r.page.label,
+      page_url: r.page.url
+    }));
+
+  if (changes.length > 0) {
+    console.log(`Sending notifications for ${changes.length} change(s)...`);
+    const notifyResult = await sendChangeAlert(changes);
+
+    if (notifyResult.sent) {
+      Change.markManyNotified(changes.map(c => c.id));
+    }
+  }
+
+  return {
+    competitors: competitors.length,
+    checked: totalPages,
+    changes: totalChanges,
+    results: allResults
+  };
+}
+
+export async function checkCompetitorsForPlan(plan) {
+  const competitors = Competitor.getAllByPlan(plan);
+  const allResults = [];
+  let totalPages = 0;
+  let totalChanges = 0;
+
+  console.log(`Starting ${plan} plan check for ${competitors.length} competitor(s)...`);
+
+  if (competitors.length === 0) {
+    return { competitors: 0, checked: 0, changes: 0, results: [] };
+  }
+
+  const scraper = new Scraper();
+  try {
+    await scraper.init();
+
+    for (const competitor of competitors) {
+      const pages = Page.findByCompetitor(competitor.id, true);
+
+      if (!pages || pages.length === 0) {
+        console.log(`Skipping ${competitor.name} - no pages configured`);
+        continue;
+      }
+
+      console.log(`Checking ${competitor.name} (${pages.length} pages)...`);
+
+      for (const page of pages) {
         totalPages++;
         try {
           const result = await checkPageWithScraper(page, competitor.name, scraper);

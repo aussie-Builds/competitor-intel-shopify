@@ -144,4 +144,53 @@ if (hasUrlColumn) {
   `);
 }
 
+// Auth tables migration - add users, sessions, and user_id to competitors
+const usersTableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'").get();
+
+if (!usersTableExists) {
+  console.log('[DB] Adding auth tables...');
+
+  db.exec(`
+    CREATE TABLE users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      name TEXT,
+      stripe_customer_id TEXT UNIQUE,
+      stripe_subscription_id TEXT,
+      subscription_status TEXT DEFAULT 'inactive',
+      plan TEXT DEFAULT 'starter',
+      plan_period_end TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE sessions (
+      id TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX idx_users_email ON users(email);
+    CREATE INDEX idx_users_stripe_customer ON users(stripe_customer_id);
+    CREATE INDEX idx_sessions_user ON sessions(user_id);
+    CREATE INDEX idx_sessions_expires ON sessions(expires_at);
+  `);
+
+  console.log('[DB] Auth tables created');
+}
+
+// Add user_id to competitors if not exists
+const competitorColumns = db.prepare("PRAGMA table_info(competitors)").all();
+const hasUserIdColumn = competitorColumns.some(col => col.name === 'user_id');
+
+if (!hasUserIdColumn) {
+  console.log('[DB] Adding user_id to competitors...');
+  db.exec(`ALTER TABLE competitors ADD COLUMN user_id INTEGER REFERENCES users(id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_competitors_user ON competitors(user_id)`);
+  console.log('[DB] user_id column added to competitors');
+}
+
 export default db;

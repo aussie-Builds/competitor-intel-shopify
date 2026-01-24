@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Competitor } from '../models/competitor.js';
 import { Page, COMMON_PAGES } from '../models/page.js';
 import { Change } from '../models/change.js';
+import { User } from '../models/user.js';
 import { checkCompetitor, checkPage } from '../services/monitor.js';
 
 const router = Router();
@@ -9,7 +10,7 @@ const router = Router();
 // Get all competitors with their pages
 router.get('/', (req, res) => {
   try {
-    const competitors = Competitor.getAllWithPages();
+    const competitors = Competitor.getAllWithPages(true, req.user.id);
     res.json(competitors);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -29,7 +30,31 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'At least one page URL is required' });
     }
 
-    const competitor = Competitor.createWithPages(name, pages, check_frequency);
+    // Check tier limits
+    const limits = User.getSubscriptionLimits(req.user.id);
+    const currentCount = Competitor.countByUser(req.user.id);
+
+    if (currentCount >= limits.maxCompetitors) {
+      return res.status(403).json({
+        error: `Competitor limit reached (${limits.maxCompetitors} max)`,
+        code: 'LIMIT_REACHED',
+        limit: limits.maxCompetitors,
+        current: currentCount,
+        upgrade: req.user.plan === 'starter'
+      });
+    }
+
+    // Check page limit for new competitor
+    if (pages.length > limits.maxPagesPerCompetitor) {
+      return res.status(403).json({
+        error: `Page limit exceeded (${limits.maxPagesPerCompetitor} max per competitor)`,
+        code: 'PAGE_LIMIT_REACHED',
+        limit: limits.maxPagesPerCompetitor,
+        upgrade: req.user.plan === 'starter'
+      });
+    }
+
+    const competitor = Competitor.createWithPages(name, pages, check_frequency, req.user.id);
     res.status(201).json(competitor);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -44,11 +69,11 @@ router.get('/common-pages', (req, res) => {
 // Get single competitor with pages
 router.get('/:id', (req, res) => {
   try {
-    const competitor = Competitor.getWithPages(req.params.id);
+    const competitor = Competitor.findByIdAndUser(req.params.id, req.user.id);
     if (!competitor) {
       return res.status(404).json({ error: 'Competitor not found' });
     }
-    res.json(competitor);
+    res.json(Competitor.getWithPages(competitor.id));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -57,7 +82,7 @@ router.get('/:id', (req, res) => {
 // Update competitor
 router.put('/:id', (req, res) => {
   try {
-    const competitor = Competitor.findById(req.params.id);
+    const competitor = Competitor.findByIdAndUser(req.params.id, req.user.id);
     if (!competitor) {
       return res.status(404).json({ error: 'Competitor not found' });
     }
@@ -72,7 +97,7 @@ router.put('/:id', (req, res) => {
 // Delete competitor
 router.delete('/:id', (req, res) => {
   try {
-    const competitor = Competitor.findById(req.params.id);
+    const competitor = Competitor.findByIdAndUser(req.params.id, req.user.id);
     if (!competitor) {
       return res.status(404).json({ error: 'Competitor not found' });
     }
@@ -87,7 +112,7 @@ router.delete('/:id', (req, res) => {
 // Check all pages for a competitor
 router.post('/:id/check', async (req, res) => {
   try {
-    const competitor = Competitor.findById(req.params.id);
+    const competitor = Competitor.findByIdAndUser(req.params.id, req.user.id);
     if (!competitor) {
       return res.status(404).json({ error: 'Competitor not found' });
     }
@@ -102,6 +127,11 @@ router.post('/:id/check', async (req, res) => {
 // Get competitor changes
 router.get('/:id/changes', (req, res) => {
   try {
+    const competitor = Competitor.findByIdAndUser(req.params.id, req.user.id);
+    if (!competitor) {
+      return res.status(404).json({ error: 'Competitor not found' });
+    }
+
     const limit = parseInt(req.query.limit) || 20;
     const changes = Change.findByCompetitor(req.params.id, limit);
     res.json(changes);
@@ -115,7 +145,7 @@ router.get('/:id/changes', (req, res) => {
 // Add page to competitor
 router.post('/:id/pages', (req, res) => {
   try {
-    const competitor = Competitor.findById(req.params.id);
+    const competitor = Competitor.findByIdAndUser(req.params.id, req.user.id);
     if (!competitor) {
       return res.status(404).json({ error: 'Competitor not found' });
     }
@@ -123,6 +153,20 @@ router.post('/:id/pages', (req, res) => {
     const { url, label } = req.body;
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
+    }
+
+    // Check page limit
+    const limits = User.getSubscriptionLimits(req.user.id);
+    const pageCount = Page.countByCompetitor(req.params.id);
+
+    if (pageCount >= limits.maxPagesPerCompetitor) {
+      return res.status(403).json({
+        error: `Page limit reached (${limits.maxPagesPerCompetitor} max per competitor)`,
+        code: 'PAGE_LIMIT_REACHED',
+        limit: limits.maxPagesPerCompetitor,
+        current: pageCount,
+        upgrade: req.user.plan === 'starter'
+      });
     }
 
     const existing = Page.findByUrl(req.params.id, url);
@@ -140,7 +184,7 @@ router.post('/:id/pages', (req, res) => {
 // Add multiple pages (Quick Add)
 router.post('/:id/pages/bulk', (req, res) => {
   try {
-    const competitor = Competitor.findById(req.params.id);
+    const competitor = Competitor.findByIdAndUser(req.params.id, req.user.id);
     if (!competitor) {
       return res.status(404).json({ error: 'Competitor not found' });
     }
@@ -148,6 +192,23 @@ router.post('/:id/pages/bulk', (req, res) => {
     const { pages } = req.body;
     if (!pages || pages.length === 0) {
       return res.status(400).json({ error: 'Pages array is required' });
+    }
+
+    // Check page limit
+    const limits = User.getSubscriptionLimits(req.user.id);
+    const currentPageCount = Page.countByCompetitor(req.params.id);
+    const newTotal = currentPageCount + pages.length;
+
+    if (newTotal > limits.maxPagesPerCompetitor) {
+      const canAdd = limits.maxPagesPerCompetitor - currentPageCount;
+      return res.status(403).json({
+        error: `Would exceed page limit (${limits.maxPagesPerCompetitor} max, can add ${canAdd} more)`,
+        code: 'PAGE_LIMIT_REACHED',
+        limit: limits.maxPagesPerCompetitor,
+        current: currentPageCount,
+        canAdd,
+        upgrade: req.user.plan === 'starter'
+      });
     }
 
     const created = Page.createMany(req.params.id, pages);
@@ -160,6 +221,11 @@ router.post('/:id/pages/bulk', (req, res) => {
 // Get pages for competitor
 router.get('/:id/pages', (req, res) => {
   try {
+    const competitor = Competitor.findByIdAndUser(req.params.id, req.user.id);
+    if (!competitor) {
+      return res.status(404).json({ error: 'Competitor not found' });
+    }
+
     const pages = Page.getAllByCompetitorWithSnapshots(req.params.id);
     res.json(pages);
   } catch (error) {
@@ -170,6 +236,11 @@ router.get('/:id/pages', (req, res) => {
 // Update page
 router.put('/:competitorId/pages/:pageId', (req, res) => {
   try {
+    const competitor = Competitor.findByIdAndUser(req.params.competitorId, req.user.id);
+    if (!competitor) {
+      return res.status(404).json({ error: 'Competitor not found' });
+    }
+
     const page = Page.findById(req.params.pageId);
     if (!page || page.competitor_id !== parseInt(req.params.competitorId)) {
       return res.status(404).json({ error: 'Page not found' });
@@ -185,6 +256,11 @@ router.put('/:competitorId/pages/:pageId', (req, res) => {
 // Delete page
 router.delete('/:competitorId/pages/:pageId', (req, res) => {
   try {
+    const competitor = Competitor.findByIdAndUser(req.params.competitorId, req.user.id);
+    if (!competitor) {
+      return res.status(404).json({ error: 'Competitor not found' });
+    }
+
     const page = Page.findById(req.params.pageId);
     if (!page || page.competitor_id !== parseInt(req.params.competitorId)) {
       return res.status(404).json({ error: 'Page not found' });
@@ -200,6 +276,11 @@ router.delete('/:competitorId/pages/:pageId', (req, res) => {
 // Check single page
 router.post('/:competitorId/pages/:pageId/check', async (req, res) => {
   try {
+    const competitor = Competitor.findByIdAndUser(req.params.competitorId, req.user.id);
+    if (!competitor) {
+      return res.status(404).json({ error: 'Competitor not found' });
+    }
+
     const page = Page.findById(req.params.pageId);
     if (!page || page.competitor_id !== parseInt(req.params.competitorId)) {
       return res.status(404).json({ error: 'Page not found' });

@@ -2,17 +2,17 @@ import db from './database.js';
 import { Page } from './page.js';
 
 export const Competitor = {
-  create(name, checkFrequency = 'daily') {
+  create(name, checkFrequency = 'daily', userId = null) {
     const stmt = db.prepare(`
-      INSERT INTO competitors (name, check_frequency)
-      VALUES (?, ?)
+      INSERT INTO competitors (name, check_frequency, user_id)
+      VALUES (?, ?, ?)
     `);
-    const result = stmt.run(name, checkFrequency);
+    const result = stmt.run(name, checkFrequency, userId);
     return this.findById(result.lastInsertRowid);
   },
 
-  createWithPages(name, pages, checkFrequency = 'daily') {
-    const competitor = this.create(name, checkFrequency);
+  createWithPages(name, pages, checkFrequency = 'daily', userId = null) {
+    const competitor = this.create(name, checkFrequency, userId);
 
     if (pages && pages.length > 0) {
       Page.createMany(competitor.id, pages);
@@ -25,11 +25,21 @@ export const Competitor = {
     return db.prepare('SELECT * FROM competitors WHERE id = ?').get(id);
   },
 
-  findAll(activeOnly = true) {
-    const query = activeOnly
-      ? 'SELECT * FROM competitors WHERE active = 1 ORDER BY name'
-      : 'SELECT * FROM competitors ORDER BY name';
-    return db.prepare(query).all();
+  findByIdAndUser(id, userId) {
+    return db.prepare('SELECT * FROM competitors WHERE id = ? AND user_id = ?').get(id, userId);
+  },
+
+  findAll(activeOnly = true, userId = null) {
+    let query = activeOnly
+      ? 'SELECT * FROM competitors WHERE active = 1'
+      : 'SELECT * FROM competitors WHERE 1=1';
+
+    if (userId) {
+      query += ' AND user_id = ?';
+      return db.prepare(query + ' ORDER BY name').all(userId);
+    }
+
+    return db.prepare(query + ' ORDER BY name').all();
   },
 
   getWithPages(id) {
@@ -40,8 +50,8 @@ export const Competitor = {
     return competitor;
   },
 
-  getAllWithPages(activeOnly = true) {
-    const competitors = this.findAll(activeOnly);
+  getAllWithPages(activeOnly = true, userId = null) {
+    const competitors = this.findAll(activeOnly, userId);
 
     return competitors.map(comp => {
       comp.pages = Page.getAllByCompetitorWithSnapshots(comp.id);
@@ -53,6 +63,21 @@ export const Competitor = {
       }, null);
       return comp;
     });
+  },
+
+  getAllByPlan(plan) {
+    // Get all active competitors for users with a specific plan
+    return db.prepare(`
+      SELECT c.* FROM competitors c
+      JOIN users u ON u.id = c.user_id
+      WHERE c.active = 1 AND u.plan = ? AND u.subscription_status = 'active'
+      ORDER BY c.name
+    `).all(plan);
+  },
+
+  countByUser(userId) {
+    const result = db.prepare('SELECT COUNT(*) as count FROM competitors WHERE user_id = ? AND active = 1').get(userId);
+    return result.count;
   },
 
   update(id, updates) {

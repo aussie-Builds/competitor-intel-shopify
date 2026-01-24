@@ -81,5 +81,30 @@ export const Change = {
         SUM(CASE WHEN significance = 'high' THEN 1 ELSE 0 END) as high_significance
       FROM changes
     `).get();
+  },
+
+  getStatsByUser(userId) {
+    return db.prepare(`
+      SELECT
+        COUNT(*) as total_changes,
+        SUM(CASE WHEN ch.detected_at >= datetime('now', '-1 day') THEN 1 ELSE 0 END) as changes_24h,
+        SUM(CASE WHEN ch.detected_at >= datetime('now', '-7 days') THEN 1 ELSE 0 END) as changes_7d,
+        SUM(CASE WHEN ch.significance = 'high' THEN 1 ELSE 0 END) as high_significance
+      FROM changes ch
+      JOIN competitors c ON c.id = ch.competitor_id
+      WHERE c.user_id = ?
+    `).get(userId);
+  },
+
+  findRecentByUser(userId, days = 7, limit = 50) {
+    return db.prepare(`
+      SELECT ch.*, c.name as competitor_name, p.label as page_label, p.url as page_url
+      FROM changes ch
+      JOIN competitors c ON c.id = ch.competitor_id
+      LEFT JOIN pages p ON p.id = ch.page_id
+      WHERE c.user_id = ? AND ch.detected_at >= datetime('now', '-' || ? || ' days')
+      ORDER BY ch.detected_at DESC
+      LIMIT ?
+    `).all(userId, days, limit);
   }
 };

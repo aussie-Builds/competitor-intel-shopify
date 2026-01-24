@@ -16,9 +16,11 @@
     "@anthropic-ai/sdk": "^0.39.0",
     "better-sqlite3": "^11.7.0",
     "cheerio": "^1.0.0",
+    "cookie-parser": "^1.4.6",
     "express": "^4.21.2",
     "node-cron": "^3.0.3",
-    "resend": "^4.1.0"
+    "resend": "^4.1.0",
+    "stripe": "^14.0.0"
   },
   "type": "module"
 }

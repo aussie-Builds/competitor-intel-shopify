@@ -1,6 +1,8 @@
 let commonPages = [];
 let selectedQuickPages = new Set();
 let currentAddPageCompetitor = null;
+let currentUser = null;
+let usageLimits = null;
 
 // Page type icons (SVG)
 const pageIcons = {
@@ -38,20 +40,114 @@ function getPageIcon(label) {
 
 async function loadDashboard() {
   try {
-    const [dashboardRes, commonPagesRes] = await Promise.all([
-      fetch('/api/dashboard'),
-      fetch('/api/competitors/common-pages')
+    const dashboardRes = await fetch('/api/dashboard');
+
+    // Handle auth errors
+    if (dashboardRes.status === 401) {
+      window.location.href = '/login';
+      return;
+    }
+
+    if (dashboardRes.status === 403) {
+      const data = await dashboardRes.json();
+      if (data.code === 'SUBSCRIPTION_REQUIRED') {
+        window.location.href = '/pricing';
+        return;
+      }
+    }
+
+    if (!dashboardRes.ok) {
+      throw new Error('Failed to load dashboard');
+    }
+
+    const [data, commonPagesRes] = await Promise.all([
+      dashboardRes.json(),
+      fetch('/api/competitors/common-pages').then(r => r.json())
     ]);
 
-    const data = await dashboardRes.json();
-    commonPages = await commonPagesRes.json();
+    commonPages = commonPagesRes;
+    currentUser = data.user;
+    usageLimits = data.usage;
 
+    updateUserInfo(data.user, data.usage);
     updateStats(data.stats, data.competitors.length);
     renderCompetitors(data.competitors);
     renderChanges(data.recentChanges);
     renderQuickAddButtons();
   } catch (error) {
     console.error('Failed to load dashboard:', error);
+    // If we can't load, redirect to login
+    if (error.message.includes('401') || error.message.includes('auth')) {
+      window.location.href = '/login';
+    }
+  }
+}
+
+function updateUserInfo(user, usage) {
+  const userName = document.getElementById('user-name');
+  const userPlan = document.getElementById('user-plan');
+  const usageCompetitors = document.getElementById('usage-competitors');
+  const usagePages = document.getElementById('usage-pages');
+  const usageFrequency = document.getElementById('usage-frequency');
+  const upgradeLink = document.getElementById('upgrade-link');
+
+  if (userName) userName.textContent = user.name || user.email.split('@')[0];
+  if (userPlan) userPlan.textContent = user.plan.charAt(0).toUpperCase() + user.plan.slice(1);
+
+  if (usageCompetitors) usageCompetitors.textContent = `${usage.competitors}/${usage.maxCompetitors}`;
+  if (usagePages) {
+    usagePages.textContent = usage.maxPagesPerCompetitor === Infinity ? 'Unlimited' : `${usage.maxPagesPerCompetitor} max`;
+  }
+  if (usageFrequency) {
+    usageFrequency.textContent = usage.checkFrequency === 'hourly' ? 'Hourly' : 'Daily';
+  }
+
+  // Hide upgrade link for pro users
+  if (upgradeLink && user.plan === 'pro') {
+    upgradeLink.style.display = 'none';
+  }
+}
+
+function toggleUserDropdown() {
+  const dropdown = document.getElementById('user-dropdown');
+  dropdown.classList.toggle('active');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('user-dropdown');
+  const menuBtn = document.querySelector('.user-menu-btn');
+  if (dropdown && !dropdown.contains(e.target) && !menuBtn.contains(e.target)) {
+    dropdown.classList.remove('active');
+  }
+});
+
+async function logout() {
+  try {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  } catch (error) {
+    console.error('Logout failed:', error);
+  }
+}
+
+async function openBillingPortal() {
+  try {
+    const res = await fetch('/api/payments/billing-portal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || 'Failed to open billing portal');
+      return;
+    }
+
+    window.location.href = data.url;
+  } catch (error) {
+    alert('Failed to open billing portal');
   }
 }
 
@@ -340,7 +436,13 @@ async function addCompetitor(event) {
 
     if (!res.ok) {
       const error = await res.json();
-      alert(error.error || 'Failed to add competitor');
+      if (error.code === 'LIMIT_REACHED' && error.upgrade) {
+        if (confirm(`${error.error}\n\nWould you like to upgrade your plan?`)) {
+          window.location.href = '/pricing';
+        }
+      } else {
+        alert(error.error || 'Failed to add competitor');
+      }
       return;
     }
 
@@ -367,7 +469,13 @@ async function addPageToCompetitor(event) {
 
     if (!res.ok) {
       const error = await res.json();
-      alert(error.error || 'Failed to add page');
+      if (error.code === 'PAGE_LIMIT_REACHED' && error.upgrade) {
+        if (confirm(`${error.error}\n\nWould you like to upgrade your plan?`)) {
+          window.location.href = '/pricing';
+        }
+      } else {
+        alert(error.error || 'Failed to add page');
+      }
       return;
     }
 

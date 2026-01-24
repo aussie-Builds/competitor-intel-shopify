@@ -99,6 +99,11 @@ export const Page = {
       WHERE p.competitor_id = ? AND p.active = 1
       ORDER BY p.label
     `).all(competitorId);
+  },
+
+  countByCompetitor(competitorId) {
+    const result = db.prepare('SELECT COUNT(*) as count FROM pages WHERE competitor_id = ? AND active = 1').get(competitorId);
+    return result.count;
   }
 };
 

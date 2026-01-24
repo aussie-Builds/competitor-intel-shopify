@@ -26,4 +26,11 @@ export const config = {
   alertEmailFrom: process.env.ALERT_EMAIL_FROM || 'alerts@competitor-intel.com',
   alertEmailTo: process.env.ALERT_EMAIL_TO,
   port: parseInt(process.env.PORT || '3000', 10),
+
+  // Stripe
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  stripePriceIdStarter: process.env.STRIPE_PRICE_ID_STARTER,
+  stripePriceIdPro: process.env.STRIPE_PRICE_ID_PRO,
+  appUrl: process.env.APP_URL || 'http://localhost:3000',
 };
