@@ -79,12 +79,15 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           const subscription = await StripeService.getSubscription(session.subscription);
           const priceId = subscription.items.data[0]?.price?.id;
           const plan = StripeService.determinePlanFromPriceId(priceId);
+          const periodEnd = subscription.current_period_end
+            ? new Date(subscription.current_period_end * 1000).toISOString()
+            : null;
 
           User.updateStripeInfo(parseInt(userId), {
             subscriptionId: subscription.id,
             status: 'active',
             plan,
-            periodEnd: new Date(subscription.current_period_end * 1000).toISOString()
+            periodEnd
           });
 
           console.log(`User ${userId} subscribed to ${plan} plan`);
@@ -100,12 +103,15 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           const priceId = subscription.items.data[0]?.price?.id;
           const plan = StripeService.determinePlanFromPriceId(priceId);
           const status = subscription.status === 'active' ? 'active' : 'inactive';
+          const periodEnd = subscription.current_period_end
+            ? new Date(subscription.current_period_end * 1000).toISOString()
+            : null;
 
           User.updateStripeInfo(user.id, {
             subscriptionId: subscription.id,
             status,
             plan: status === 'active' ? plan : user.plan,
-            periodEnd: new Date(subscription.current_period_end * 1000).toISOString()
+            periodEnd
           });
 
           console.log(`User ${user.id} subscription updated: ${status}, plan: ${plan}`);

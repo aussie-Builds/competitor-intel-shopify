@@ -61,11 +61,16 @@ router.post('/login', async (req, res) => {
     }
 
     const user = User.findByEmail(email);
+    console.log('[DEBUG] Login attempt for:', email);
+    console.log('[DEBUG] User found:', user ? 'yes' : 'no');
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    console.log('[DEBUG] User password_hash exists:', !!user.password_hash);
+    console.log('[DEBUG] User password_hash type:', typeof user.password_hash);
     const isValid = await verifyPassword(password, user.password_hash);
+    console.log('[DEBUG] Password valid:', isValid);
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
