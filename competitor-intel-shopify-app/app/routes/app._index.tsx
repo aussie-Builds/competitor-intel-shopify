@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useNavigate } from "@remix-run/react";
+import { useLoaderData, useNavigate, useRevalidator } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -11,6 +11,7 @@ import {
   Badge,
   EmptyState,
   Box,
+  Banner,
 } from "@shopify/polaris";
 import { authenticate } from "~/shopify.server";
 import prisma from "~/db.server";
@@ -19,7 +20,7 @@ import { DashboardStats } from "~/components/DashboardStats";
 import { CompetitorCard } from "~/components/CompetitorCard";
 import { ChangeList } from "~/components/ChangeList";
 import { AddCompetitorModal } from "~/components/AddCompetitorModal";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -110,9 +111,47 @@ export default function Dashboard() {
   const { shop, competitors, recentChanges, stats } =
     useLoaderData<typeof loader>();
   const navigate = useNavigate();
+  const revalidator = useRevalidator();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isCheckingAll, setIsCheckingAll] = useState(false);
+  const [checkStatus, setCheckStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const canAddCompetitor = stats.totalCompetitors < stats.maxCompetitors;
+
+  const handleCheckAll = useCallback(async () => {
+    setIsCheckingAll(true);
+    setCheckStatus(null);
+
+    try {
+      const response = await fetch("/api/check", {
+        method: "POST",
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setCheckStatus({
+          type: "success",
+          message: `Checked ${data.result?.competitors || 0} competitor(s), ${data.result?.checked || 0} page(s). ${data.result?.changes || 0} change(s) detected.`,
+        });
+        revalidator.revalidate();
+      } else {
+        setCheckStatus({
+          type: "error",
+          message: data.error || "Failed to check competitors",
+        });
+      }
+    } catch (error) {
+      setCheckStatus({
+        type: "error",
+        message: "Failed to check competitors. Please try again.",
+      });
+    } finally {
+      setIsCheckingAll(false);
+    }
+  }, [revalidator]);
 
   return (
     <Page
@@ -125,12 +164,27 @@ export default function Dashboard() {
       }}
       secondaryActions={[
         {
+          content: isCheckingAll ? "Checking..." : "Check All",
+          onAction: handleCheckAll,
+          loading: isCheckingAll,
+          disabled: isCheckingAll || competitors.length === 0,
+        },
+        {
           content: "Settings",
           onAction: () => navigate("/app/settings"),
         },
       ]}
     >
       <BlockStack gap="500">
+        {checkStatus && (
+          <Banner
+            tone={checkStatus.type === "success" ? "success" : "critical"}
+            onDismiss={() => setCheckStatus(null)}
+          >
+            {checkStatus.message}
+          </Banner>
+        )}
+
         <DashboardStats
           totalCompetitors={stats.totalCompetitors}
           maxCompetitors={stats.maxCompetitors}

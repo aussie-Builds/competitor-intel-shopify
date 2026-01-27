@@ -84,10 +84,43 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       });
     }
 
-    return json(
-      { success: false, error: "Either competitorId or pageId is required" },
-      { status: 400 }
-    );
+    // Check all competitors for shop (no competitorId or pageId)
+    const allCompetitors = await prisma.competitor.findMany({
+      where: {
+        shopId: shop.id,
+        active: true,
+      },
+      select: { id: true },
+    });
+
+    if (allCompetitors.length === 0) {
+      return json({
+        success: true,
+        result: {
+          competitors: 0,
+          checked: 0,
+          changes: 0,
+        },
+      });
+    }
+
+    let totalChecked = 0;
+    let totalChanges = 0;
+
+    for (const competitor of allCompetitors) {
+      const result = await checkCompetitor(competitor.id);
+      totalChecked += result.checked;
+      totalChanges += result.changes;
+    }
+
+    return json({
+      success: true,
+      result: {
+        competitors: allCompetitors.length,
+        checked: totalChecked,
+        changes: totalChanges,
+      },
+    });
   } catch (error) {
     console.error("Check error:", error);
     return json(
