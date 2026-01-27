@@ -2,17 +2,18 @@
 
 client_id = "09548b33d3fcfb2292ef1ea247eed7d0"
 name = "Competitor Intel"
-application_url = "https://lives-anchor-label-veterinary.trycloudflare.com"
+application_url = "https://dean-sensors-times-initially.trycloudflare.com"
 embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "review-tool-demo.myshopify.com"
 
 [webhooks]
 api_version = "2026-01"
 
 [access_scopes]
-# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_products"
-optional_scopes = [ ]
-use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
