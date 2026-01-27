@@ -110,7 +110,7 @@ export default function CompetitorDetail() {
       if (data.success) {
         setCheckStatus({
           type: "success",
-          message: `Checked ${data.result?.pagesChecked || 0} page(s). ${data.result?.changesFound || 0} change(s) detected.`,
+          message: `Checked ${data.result?.checked || 0} page(s). ${data.result?.changes || 0} change(s) detected.`,
         });
         // Refresh the page data
         revalidator.revalidate();
