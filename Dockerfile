@@ -2,17 +2,20 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
-RUN npm ci --only=production
+# Copy Shopify Remix app
+COPY competitor-intel-shopify-app/package*.json ./
+
+# Install all dependencies (including dev for build)
+RUN npm ci
 
 # Copy application code
-COPY . .
+COPY competitor-intel-shopify-app/ .
 
-# Create data directory
-RUN mkdir -p /app/data
+# Generate Prisma client and build the Remix app
+RUN npx prisma generate && npm run build
 
 # Expose port
 EXPOSE 3000
@@ -21,5 +24,5 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Start the application
-CMD ["npm", "start"]
+# Start the Remix server
+CMD ["npm", "run", "docker-start"]

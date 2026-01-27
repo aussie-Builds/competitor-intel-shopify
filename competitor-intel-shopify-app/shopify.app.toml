@@ -2,7 +2,7 @@
 
 client_id = "09548b33d3fcfb2292ef1ea247eed7d0"
 name = "Competitor Intel"
-application_url = "https://average-jay-opponent-api.trycloudflare.com"
+application_url = "https://lives-anchor-label-veterinary.trycloudflare.com"
 embedded = true
 
 [webhooks]

@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+model Shop {
+  id              String       @id @default(uuid())
+  shopDomain      String       @unique
+  plan            String       @default("starter")
+  planActivatedAt DateTime?
+  alertEmail      String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  competitors     Competitor[]
+}
+
+model Competitor {
+  id         String   @id @default(uuid())
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name       String
+  websiteUrl String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  pages      Page[]
+
+  @@index([shopId])
+}
+
+model Page {
+  id           String     @id @default(uuid())
+  competitorId String
+  competitor   Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  url          String
+  label        String     @default("Homepage")
+  active       Boolean    @default(true)
+  lastChecked  DateTime?
+  createdAt    DateTime   @default(now())
+  snapshots    Snapshot[]
+  changes      Change[]
+
+  @@unique([competitorId, url])
+  @@index([competitorId])
+}
+
+model Snapshot {
+  id          String   @id @default(uuid())
+  pageId      String
+  page        Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  contentHash String
+  htmlContent String?
+  textContent String?
+  capturedAt  DateTime @default(now())
+
+  @@index([pageId])
+  @@index([capturedAt])
+}
+
+model Change {
+  id             String   @id @default(uuid())
+  pageId         String
+  page           Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  oldContentHash String?
+  newContentHash String
+  changeSummary  String?
+  aiAnalysis     String?
+  significance   String   @default("medium")
+  notified       Boolean  @default(false)
+  detectedAt     DateTime @default(now())
+
+  @@index([pageId])
+  @@index([detectedAt])
+  @@index([significance])
+}
