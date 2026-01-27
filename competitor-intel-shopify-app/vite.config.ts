@@ -11,6 +11,9 @@ declare module "@remix-run/node" {
 }
 
 export default defineConfig({
+  server: {
+    allowedHosts: [".trycloudflare.com"],
+  },
   plugins: [
     remix({
       future: {
