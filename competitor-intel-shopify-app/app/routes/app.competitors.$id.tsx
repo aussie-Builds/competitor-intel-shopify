@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useNavigate } from "@remix-run/react";
+import { useLoaderData, useNavigate, useRevalidator } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -14,12 +14,13 @@ import {
   DataTable,
   EmptyState,
 } from "@shopify/polaris";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { authenticate } from "~/shopify.server";
 import prisma from "~/db.server";
 import { getPlanLimits } from "~/services/billing.server";
 import { ChangeList } from "~/components/ChangeList";
 import { AddPageModal } from "~/components/AddPageModal";
+import { formatTimeAgo } from "~/utils/time";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -86,16 +87,53 @@ export default function CompetitorDetail() {
   const { shop, competitor, recentChanges, planLimits } =
     useLoaderData<typeof loader>();
   const navigate = useNavigate();
+  const revalidator = useRevalidator();
   const [showAddPageModal, setShowAddPageModal] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [checkStatus, setCheckStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const canAddPage = competitor.pages.length < planLimits.maxPagesPerCompetitor;
+
+  const handleCheckNow = useCallback(async () => {
+    setIsChecking(true);
+    setCheckStatus(null);
+
+    try {
+      const response = await fetch(`/api/check?competitorId=${competitor.id}`, {
+        method: "POST",
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setCheckStatus({
+          type: "success",
+          message: `Checked ${data.result?.pagesChecked || 0} page(s). ${data.result?.changesFound || 0} change(s) detected.`,
+        });
+        // Refresh the page data
+        revalidator.revalidate();
+      } else {
+        setCheckStatus({
+          type: "error",
+          message: data.error || "Failed to check competitor",
+        });
+      }
+    } catch (error) {
+      setCheckStatus({
+        type: "error",
+        message: "Failed to check competitor. Please try again.",
+      });
+    } finally {
+      setIsChecking(false);
+    }
+  }, [competitor.id, revalidator]);
 
   const pageRows = competitor.pages.map((page) => [
     page.label,
     page.url,
-    page.lastChecked
-      ? new Date(page.lastChecked).toLocaleDateString()
-      : "Never",
+    formatTimeAgo(page.lastChecked),
     page._count.changes.toString(),
     page.active ? (
       <Badge tone="success">Active</Badge>
@@ -123,13 +161,10 @@ export default function CompetitorDetail() {
       }}
       secondaryActions={[
         {
-          content: "Check Now",
-          onAction: () => {
-            // Trigger manual check
-            fetch(`/api/check?competitorId=${competitor.id}`, {
-              method: "POST",
-            });
-          },
+          content: isChecking ? "Checking..." : "Check Now",
+          onAction: handleCheckNow,
+          loading: isChecking,
+          disabled: isChecking,
         },
         {
           content: competitor.active ? "Pause" : "Resume",
@@ -159,6 +194,15 @@ export default function CompetitorDetail() {
       ]}
     >
       <BlockStack gap="500">
+        {checkStatus && (
+          <Banner
+            tone={checkStatus.type === "success" ? "success" : "critical"}
+            onDismiss={() => setCheckStatus(null)}
+          >
+            {checkStatus.message}
+          </Banner>
+        )}
+
         {!canAddPage && (
           <Banner tone="warning">
             You've reached the page limit for your plan. Upgrade to add more

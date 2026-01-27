@@ -6,6 +6,7 @@ import {
   Badge,
   Button,
 } from "@shopify/polaris";
+import { formatTimeAgo } from "~/utils/time";
 
 interface CompetitorCardProps {
   competitor: {
@@ -38,10 +39,10 @@ export function CompetitorCard({
     0
   );
 
-  const lastChecked = competitor.pages
+  const mostRecentCheck = competitor.pages
     .filter((p) => p.lastChecked)
-    .map((p) => new Date(p.lastChecked!))
-    .sort((a, b) => b.getTime() - a.getTime())[0];
+    .map((p) => p.lastChecked!)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
 
   return (
     <Box
@@ -71,9 +72,9 @@ export function CompetitorCard({
             <Text as="span" tone="subdued" variant="bodySm">
               {totalChanges} change{totalChanges !== 1 ? "s" : ""}
             </Text>
-            {lastChecked && (
+            {mostRecentCheck && (
               <Text as="span" tone="subdued" variant="bodySm">
-                Last checked: {lastChecked.toLocaleDateString()}
+                Last checked: {formatTimeAgo(mostRecentCheck)}
               </Text>
             )}
           </InlineStack>

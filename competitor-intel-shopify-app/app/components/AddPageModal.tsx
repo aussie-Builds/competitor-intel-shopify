@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useFetcher } from "@remix-run/react";
 import {
   Modal,
@@ -72,9 +72,11 @@ export function AddPageModal({
   }, [url, label, competitorId, fetcher]);
 
   // Handle successful submission
-  if (fetcher.data?.success && fetcher.state === "idle") {
-    handleClose();
-  }
+  useEffect(() => {
+    if (fetcher.data?.success && fetcher.state === "idle") {
+      handleClose();
+    }
+  }, [fetcher.data?.success, fetcher.state, handleClose]);
 
   return (
     <Modal

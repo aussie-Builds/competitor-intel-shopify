@@ -2,7 +2,7 @@
 
 client_id = "09548b33d3fcfb2292ef1ea247eed7d0"
 name = "Competitor Intel"
-application_url = "https://dean-sensors-times-initially.trycloudflare.com"
+application_url = "https://polo-holders-kenneth-oils.trycloudflare.com"
 embedded = true
 
 [build]
@@ -17,5 +17,5 @@ scopes = "read_products"
 
 [auth]
 redirect_urls = [
-  "https://competitor-intel-19ob.onrender.com/auth/callback"
+  "https://polo-holders-kenneth-oils.trycloudflare.com/auth/callback"
 ]
