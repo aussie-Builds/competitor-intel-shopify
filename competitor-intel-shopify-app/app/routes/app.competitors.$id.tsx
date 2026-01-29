@@ -13,7 +13,9 @@ import {
   Banner,
   DataTable,
   EmptyState,
+  Icon,
 } from "@shopify/polaris";
+import { DeleteIcon } from "@shopify/polaris-icons";
 import { useState, useCallback } from "react";
 import { authenticate } from "~/shopify.server";
 import prisma from "~/db.server";
@@ -97,6 +99,27 @@ export default function CompetitorDetail() {
 
   const canAddPage = competitor.pages.length < planLimits.maxPagesPerCompetitor;
 
+  const handleDeletePage = useCallback(async (pageId: string, pageLabel: string) => {
+    if (!confirm(`Are you sure you want to remove "${pageLabel}"? This will delete all snapshots and change history for this page.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/pages/${pageId}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        revalidator.revalidate();
+      } else {
+        alert(data.error || "Failed to delete page");
+      }
+    } catch (error) {
+      alert("Failed to delete page. Please try again.");
+    }
+  }, [revalidator]);
+
   const handleCheckNow = useCallback(async () => {
     setIsChecking(true);
     setCheckStatus(null);
@@ -140,6 +163,13 @@ export default function CompetitorDetail() {
     ) : (
       <Badge>Paused</Badge>
     ),
+    <Button
+      variant="plain"
+      tone="critical"
+      icon={<Icon source={DeleteIcon} />}
+      onClick={() => handleDeletePage(page.id, page.label)}
+      accessibilityLabel={`Delete ${page.label}`}
+    />,
   ]);
 
   return (
@@ -244,6 +274,7 @@ export default function CompetitorDetail() {
                       "text",
                       "numeric",
                       "text",
+                      "text",
                     ]}
                     headings={[
                       "Label",
@@ -251,6 +282,7 @@ export default function CompetitorDetail() {
                       "Last Checked",
                       "Changes",
                       "Status",
+                      "",
                     ]}
                     rows={pageRows}
                   />
