@@ -265,6 +265,7 @@ export default function Dashboard() {
         open={showAddModal}
         onClose={() => setShowAddModal(false)}
         shopId={shop.id}
+        onSuccess={() => revalidator.revalidate()}
       />
     </Page>
   );

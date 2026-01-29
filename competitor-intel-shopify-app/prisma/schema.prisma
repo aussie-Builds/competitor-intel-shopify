@@ -73,6 +73,9 @@ model Snapshot {
   contentHash String
   htmlContent String?
   textContent String?
+  priceValue  Decimal? @db.Decimal(10, 2)
+  priceRaw    String?
+  currency    String?
   capturedAt  DateTime @default(now())
 
   @@index([pageId])
@@ -88,10 +91,16 @@ model Change {
   changeSummary  String?
   aiAnalysis     String?
   significance   String   @default("medium")
+  changeType     String?
+  oldPrice       Decimal? @db.Decimal(10, 2)
+  newPrice       Decimal? @db.Decimal(10, 2)
+  priceDelta     Decimal? @db.Decimal(10, 2)
+  priceDeltaPct  Float?
   notified       Boolean  @default(false)
   detectedAt     DateTime @default(now())
 
   @@index([pageId])
   @@index([detectedAt])
   @@index([significance])
+  @@index([changeType])
 }

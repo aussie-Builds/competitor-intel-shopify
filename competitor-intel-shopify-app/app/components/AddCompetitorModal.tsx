@@ -12,12 +12,14 @@ interface AddCompetitorModalProps {
   open: boolean;
   onClose: () => void;
   shopId: string;
+  onSuccess?: () => void;
 }
 
 export function AddCompetitorModal({
   open,
   onClose,
   shopId,
+  onSuccess,
 }: AddCompetitorModalProps) {
   const fetcher = useFetcher<{ success?: boolean; error?: string }>();
   const [name, setName] = useState("");
@@ -81,9 +83,10 @@ export function AddCompetitorModal({
   // Handle successful submission
   useEffect(() => {
     if (fetcher.data?.success && fetcher.state === "idle") {
+      onSuccess?.();
       handleClose();
     }
-  }, [fetcher.data?.success, fetcher.state, handleClose]);
+  }, [fetcher.data?.success, fetcher.state, handleClose, onSuccess]);
 
   return (
     <Modal

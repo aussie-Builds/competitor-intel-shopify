@@ -13,6 +13,7 @@ interface AddPageModalProps {
   onClose: () => void;
   competitorId: string;
   competitorName: string;
+  onSuccess?: () => void;
 }
 
 export function AddPageModal({
@@ -20,6 +21,7 @@ export function AddPageModal({
   onClose,
   competitorId,
   competitorName,
+  onSuccess,
 }: AddPageModalProps) {
   const fetcher = useFetcher<{ success?: boolean; error?: string }>();
   const [url, setUrl] = useState("");
@@ -74,9 +76,10 @@ export function AddPageModal({
   // Handle successful submission
   useEffect(() => {
     if (fetcher.data?.success && fetcher.state === "idle") {
+      onSuccess?.();
       handleClose();
     }
-  }, [fetcher.data?.success, fetcher.state, handleClose]);
+  }, [fetcher.data?.success, fetcher.state, handleClose, onSuccess]);
 
   return (
     <Modal

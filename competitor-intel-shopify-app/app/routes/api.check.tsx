@@ -1,7 +1,7 @@
 import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { authenticate } from "~/shopify.server";
 import prisma from "~/db.server";
-import { checkPage, checkCompetitor } from "~/services/monitor.server";
+import { checkPage, checkCompetitor, isDevMode } from "~/services/monitor.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -25,6 +25,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const url = new URL(request.url);
   const competitorId = url.searchParams.get("competitorId");
   const pageId = url.searchParams.get("pageId");
+  const simulatedPriceParam = url.searchParams.get("simulatedPrice");
+
+  // Parse simulated price (DEV_MODE only)
+  let simulatedPrice: number | null | undefined = undefined;
+  if (isDevMode() && simulatedPriceParam !== null) {
+    simulatedPrice = simulatedPriceParam === "null" ? null : parseFloat(simulatedPriceParam);
+    if (simulatedPrice !== null && isNaN(simulatedPrice)) {
+      simulatedPrice = undefined;
+    }
+  }
 
   try {
     if (pageId) {
@@ -45,14 +55,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
       }
 
-      const result = await checkPage(pageId);
+      const result = await checkPage(pageId, { simulatedPrice });
 
       return json({
         success: true,
         result: {
           isFirstSnapshot: result.isFirstSnapshot,
           hasChange: !!result.change,
+          hasPriceChange: !!result.priceChange,
           significance: result.change?.significance || null,
+          changeType: result.change?.changeType || null,
+          priceData: result.priceChange
+            ? {
+                oldPrice: result.priceChange.priceDelta.oldPrice,
+                newPrice: result.priceChange.priceDelta.newPrice,
+                deltaAmount: result.priceChange.priceDelta.deltaAmount,
+                deltaPercent: result.priceChange.priceDelta.deltaPercent,
+              }
+            : null,
         },
       });
     }

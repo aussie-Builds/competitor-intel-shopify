@@ -285,6 +285,7 @@ export default function CompetitorDetail() {
         onClose={() => setShowAddPageModal(false)}
         competitorId={competitor.id}
         competitorName={competitor.name}
+        onSuccess={() => revalidator.revalidate()}
       />
     </Page>
   );

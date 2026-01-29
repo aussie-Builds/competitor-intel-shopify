@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { createHash } from "crypto";
+import { extractPrice, type ExtractedPrice } from "./priceExtractor.server";
 
 export interface ScrapeResult {
   url: string;
@@ -7,6 +8,10 @@ export interface ScrapeResult {
   textContent: string;
   contentHash: string;
   capturedAt: string;
+  priceValue: number | null;
+  priceRaw: string | null;
+  currency: string | null;
+  priceConfidence: ExtractedPrice["confidence"];
 }
 
 export interface ScrapeError {
@@ -110,12 +115,19 @@ export class Scraper {
         .digest("hex")
         .substring(0, 16);
 
+      // Extract price information
+      const priceData = extractPrice(htmlContent, textContent);
+
       return {
         url,
         htmlContent,
         textContent,
         contentHash,
         capturedAt: new Date().toISOString(),
+        priceValue: priceData.priceValue,
+        priceRaw: priceData.priceRaw,
+        currency: priceData.currency,
+        priceConfidence: priceData.confidence,
       };
     } catch (error) {
       clearTimeout(timeoutId);
