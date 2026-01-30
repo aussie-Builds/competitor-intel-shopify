@@ -26,14 +26,17 @@ model Session {
 }
 
 model Shop {
-  id              String       @id @default(uuid())
-  shopDomain      String       @unique
-  plan            String       @default("starter")
-  planActivatedAt DateTime?
-  alertEmail      String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  competitors     Competitor[]
+  id                       String       @id @default(uuid())
+  shopDomain               String       @unique
+  plan                     String       @default("starter")
+  planActivatedAt          DateTime?
+  alertEmail               String?
+  checkIntervalMinutes     Int          @default(360) // User-selected interval, default 6 hours
+  maxFrequencyAllowedMinutes Int        @default(360) // Plan gate: lower = more frequent allowed
+  lastAutoCheckAt          DateTime?
+  createdAt                DateTime     @default(now())
+  updatedAt                DateTime     @updatedAt
+  competitors              Competitor[]
 }
 
 model Competitor {

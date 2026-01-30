@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Shop" ADD COLUMN "checkIntervalMinutes" INTEGER NOT NULL DEFAULT 360;
+ALTER TABLE "Shop" ADD COLUMN "maxFrequencyAllowedMinutes" INTEGER NOT NULL DEFAULT 360;
+ALTER TABLE "Shop" ADD COLUMN "lastAutoCheckAt" TIMESTAMP(3);

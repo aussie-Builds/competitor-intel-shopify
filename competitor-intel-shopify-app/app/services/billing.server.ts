@@ -2,25 +2,44 @@ export interface PlanLimits {
   maxCompetitors: number;
   maxPagesPerCompetitor: number;
   checkIntervalMinutes: number;
+  maxFrequencyAllowedMinutes: number; // Lower = more frequent checks allowed
 }
 
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   starter: {
     maxCompetitors: 3,
     maxPagesPerCompetitor: 5,
-    checkIntervalMinutes: 1440, // Daily
+    checkIntervalMinutes: 1440, // Daily (default display)
+    maxFrequencyAllowedMinutes: 1440, // Daily minimum
   },
   pro: {
     maxCompetitors: 10,
     maxPagesPerCompetitor: 25,
-    checkIntervalMinutes: 60, // Hourly
+    checkIntervalMinutes: 60, // Hourly (default display)
+    maxFrequencyAllowedMinutes: 360, // 6 hours minimum
   },
   business: {
     maxCompetitors: 25,
     maxPagesPerCompetitor: Infinity,
-    checkIntervalMinutes: 15, // Every 15 minutes
+    checkIntervalMinutes: 15, // Every 15 minutes (default display)
+    maxFrequencyAllowedMinutes: 60, // Hourly minimum
   },
 };
+
+// Available check interval options for user selection
+export const CHECK_INTERVAL_OPTIONS = [
+  { value: "360", label: "Every 6 hours (recommended)" },
+  { value: "720", label: "Every 12 hours" },
+  { value: "1440", label: "Daily" },
+];
+
+// Get effective interval (respects plan limits)
+export function getEffectiveIntervalMinutes(
+  userInterval: number,
+  maxFrequencyAllowed: number
+): number {
+  return Math.max(userInterval, maxFrequencyAllowed);
+}
 
 export function getPlanLimits(plan: string): PlanLimits {
   return PLAN_LIMITS[plan.toLowerCase()] || PLAN_LIMITS.starter;

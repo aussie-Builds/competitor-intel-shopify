@@ -146,13 +146,9 @@ async function checkPageWorker(
   }
 }
 
-async function runPlanCheck(plan: string): Promise<void> {
-  console.log(`\n[Cron] Starting ${plan} plan check at ${new Date().toISOString()}`);
-
-  const shops = await prisma.shop.findMany({
-    where: {
-      plan: plan.toLowerCase(),
-    },
+async function runShopCheck(shopId: string, scraper: Scraper): Promise<{ pages: number; changes: number }> {
+  const shop = await prisma.shop.findUnique({
+    where: { id: shopId },
     include: {
       competitors: {
         where: { active: true },
@@ -165,12 +161,94 @@ async function runPlanCheck(plan: string): Promise<void> {
     },
   });
 
+  if (!shop) {
+    return { pages: 0, changes: 0 };
+  }
+
+  let totalPages = 0;
+  let totalChanges = 0;
+
+  for (const competitor of shop.competitors) {
+    if (competitor.pages.length === 0) continue;
+
+    for (const page of competitor.pages) {
+      totalPages++;
+      const result = await checkPageWorker(page.id, scraper);
+      if (result.hasChange) totalChanges++;
+    }
+  }
+
+  // Update lastAutoCheckAt even if no changes detected
+  await prisma.shop.update({
+    where: { id: shopId },
+    data: { lastAutoCheckAt: new Date() },
+  });
+
+  return { pages: totalPages, changes: totalChanges };
+}
+
+function isShopDueForCheck(
+  lastAutoCheckAt: Date | null,
+  checkIntervalMinutes: number,
+  maxFrequencyAllowedMinutes: number
+): boolean {
+  // First check is always due
+  if (!lastAutoCheckAt) {
+    return true;
+  }
+
+  // Effective interval = max of user setting and plan limit
+  const effectiveIntervalMinutes = Math.max(checkIntervalMinutes, maxFrequencyAllowedMinutes);
+  const effectiveIntervalMs = effectiveIntervalMinutes * 60 * 1000;
+
+  const timeSinceLastCheck = Date.now() - lastAutoCheckAt.getTime();
+  return timeSinceLastCheck >= effectiveIntervalMs;
+}
+
+async function runScheduledChecks(): Promise<void> {
+  console.log(`\n[Cron] Running scheduled checks at ${new Date().toISOString()}`);
+
+  // Fetch all shops that have active competitors with active pages
+  const shops = await prisma.shop.findMany({
+    where: {
+      competitors: {
+        some: {
+          active: true,
+          pages: {
+            some: { active: true },
+          },
+        },
+      },
+    },
+    select: {
+      id: true,
+      shopDomain: true,
+      checkIntervalMinutes: true,
+      maxFrequencyAllowedMinutes: true,
+      lastAutoCheckAt: true,
+    },
+  });
+
   if (shops.length === 0) {
-    console.log(`[Cron] No shops on ${plan} plan`);
+    console.log(`[Cron] No shops with active pages to check`);
     return;
   }
 
-  console.log(`[Cron] Checking ${shops.length} shop(s) on ${plan} plan`);
+  // Filter to shops that are due for a check
+  const dueShops = shops.filter((shop) =>
+    isShopDueForCheck(
+      shop.lastAutoCheckAt,
+      shop.checkIntervalMinutes,
+      shop.maxFrequencyAllowedMinutes
+    )
+  );
+
+  if (dueShops.length === 0) {
+    console.log(`[Cron] No shops due for check (${shops.length} shop(s) checked, none due)`);
+    return;
+  }
+
+  console.log(`[Cron] ${dueShops.length} shop(s) due for check`);
 
   const scraper = new Scraper();
   await scraper.init();
@@ -179,48 +257,35 @@ async function runPlanCheck(plan: string): Promise<void> {
   let totalChanges = 0;
 
   try {
-    for (const shop of shops) {
-      console.log(`\n[Cron] Shop: ${shop.shopDomain}`);
+    for (const shop of dueShops) {
+      const effectiveInterval = Math.max(
+        shop.checkIntervalMinutes,
+        shop.maxFrequencyAllowedMinutes
+      );
+      console.log(
+        `\n[Cron] Shop: ${shop.shopDomain} (interval: ${effectiveInterval}min)`
+      );
 
-      for (const competitor of shop.competitors) {
-        if (competitor.pages.length === 0) continue;
-
-        for (const page of competitor.pages) {
-          totalPages++;
-          const result = await checkPageWorker(page.id, scraper);
-          if (result.hasChange) totalChanges++;
-        }
-      }
+      const result = await runShopCheck(shop.id, scraper);
+      totalPages += result.pages;
+      totalChanges += result.changes;
     }
   } finally {
     await scraper.close();
   }
 
   console.log(
-    `\n[Cron] ${plan} plan check complete: ${totalPages} pages, ${totalChanges} changes`
+    `\n[Cron] Scheduled check complete: ${dueShops.length} shop(s), ${totalPages} pages, ${totalChanges} changes`
   );
 }
 
-// Schedule cron jobs for each plan
+// Single cron job that runs every 5 minutes
 console.log("[Cron] Starting Competitor Intel background worker...");
 
-// Business plan: Every 15 minutes
-cron.schedule("*/15 * * * *", () => {
-  runPlanCheck("business").catch(console.error);
+cron.schedule("*/5 * * * *", () => {
+  runScheduledChecks().catch(console.error);
 });
-console.log("[Cron] Scheduled Business plan checks (every 15 minutes)");
-
-// Pro plan: Every hour at minute 0
-cron.schedule("0 * * * *", () => {
-  runPlanCheck("pro").catch(console.error);
-});
-console.log("[Cron] Scheduled Pro plan checks (hourly)");
-
-// Starter plan: Daily at 9am UTC
-cron.schedule("0 9 * * *", () => {
-  runPlanCheck("starter").catch(console.error);
-});
-console.log("[Cron] Scheduled Starter plan checks (daily at 9am UTC)");
+console.log("[Cron] Scheduled interval checks (every 5 minutes)");
 
 console.log("[Cron] Worker ready. Waiting for scheduled jobs...\n");
 

@@ -14,11 +14,17 @@ import {
   Button,
   Banner,
   Divider,
+  Select,
 } from "@shopify/polaris";
 import { useState, useCallback, useEffect } from "react";
 import { authenticate } from "~/shopify.server";
 import prisma from "~/db.server";
-import { getPlanDisplayName, getPlanLimits } from "~/services/billing.server";
+import {
+  getPlanDisplayName,
+  getPlanLimits,
+  CHECK_INTERVAL_OPTIONS,
+  getEffectiveIntervalMinutes,
+} from "~/services/billing.server";
 import { PlanSelector } from "~/components/PlanSelector";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -37,6 +43,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const planLimits = getPlanLimits(shop.plan);
 
+  const effectiveInterval = getEffectiveIntervalMinutes(
+    shop.checkIntervalMinutes,
+    shop.maxFrequencyAllowedMinutes
+  );
+
   return json({
     shop: {
       id: shop.id,
@@ -45,8 +56,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       planDisplayName: getPlanDisplayName(shop.plan),
       alertEmail: shop.alertEmail,
       planActivatedAt: shop.planActivatedAt?.toISOString() || null,
+      checkIntervalMinutes: shop.checkIntervalMinutes,
+      maxFrequencyAllowedMinutes: shop.maxFrequencyAllowedMinutes,
+      effectiveInterval,
     },
     planLimits,
+    checkIntervalOptions: CHECK_INTERVAL_OPTIONS,
   });
 };
 
@@ -64,21 +79,38 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   const alertEmail = formData.get("alertEmail") as string | null;
+  const checkIntervalMinutes = formData.get("checkIntervalMinutes") as string | null;
+
+  const updateData: { alertEmail?: string | null; checkIntervalMinutes?: number } = {};
+
+  // Handle alertEmail update
+  if (formData.has("alertEmail")) {
+    updateData.alertEmail = alertEmail?.trim() || null;
+  }
+
+  // Handle checkIntervalMinutes update
+  if (checkIntervalMinutes) {
+    const interval = parseInt(checkIntervalMinutes, 10);
+    if (!isNaN(interval) && interval > 0) {
+      updateData.checkIntervalMinutes = interval;
+    }
+  }
 
   await prisma.shop.update({
     where: { id: shop.id },
-    data: {
-      alertEmail: alertEmail?.trim() || null,
-    },
+    data: updateData,
   });
 
   return json({ success: true });
 };
 
 export default function Settings() {
-  const { shop, planLimits } = useLoaderData<typeof loader>();
+  const { shop, planLimits, checkIntervalOptions } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<{ success?: boolean; error?: string }>();
   const [alertEmail, setAlertEmail] = useState(shop.alertEmail || "");
+  const [checkInterval, setCheckInterval] = useState(
+    String(shop.checkIntervalMinutes)
+  );
   const [saved, setSaved] = useState(false);
 
   const isLoading = fetcher.state !== "idle";
@@ -89,6 +121,23 @@ export default function Settings() {
 
     fetcher.submit(formData, { method: "POST" });
   }, [alertEmail, fetcher]);
+
+  const handleSaveInterval = useCallback(() => {
+    const formData = new FormData();
+    formData.append("checkIntervalMinutes", checkInterval);
+
+    fetcher.submit(formData, { method: "POST" });
+  }, [checkInterval, fetcher]);
+
+  // Check if selected interval is below plan minimum
+  const selectedIntervalNum = parseInt(checkInterval, 10);
+  const isIntervalLimited = selectedIntervalNum < shop.maxFrequencyAllowedMinutes;
+
+  const formatInterval = (minutes: number): string => {
+    if (minutes >= 1440) return "Daily";
+    if (minutes >= 60) return `Every ${minutes / 60} hour${minutes > 60 ? "s" : ""}`;
+    return `Every ${minutes} minutes`;
+  };
 
   useEffect(() => {
     if (fetcher.data?.success) {
@@ -157,6 +206,47 @@ export default function Settings() {
             <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">
+                  Monitoring Frequency
+                </Text>
+                <Text as="p" tone="subdued">
+                  Choose how often we check your competitors' pages for changes.
+                </Text>
+
+                <Divider />
+
+                <Select
+                  label="Check Interval"
+                  options={checkIntervalOptions}
+                  value={checkInterval}
+                  onChange={setCheckInterval}
+                  helpText={
+                    isIntervalLimited
+                      ? `Your ${shop.planDisplayName} plan allows a minimum of ${formatInterval(shop.maxFrequencyAllowedMinutes)}. Effective interval: ${formatInterval(shop.effectiveInterval)}`
+                      : `Pages will be checked ${formatInterval(selectedIntervalNum).toLowerCase()}`
+                  }
+                />
+
+                {isIntervalLimited && (
+                  <Banner tone="info">
+                    Upgrade your plan to unlock more frequent monitoring.
+                  </Banner>
+                )}
+
+                <Button
+                  onClick={handleSaveInterval}
+                  loading={isLoading}
+                  variant="primary"
+                >
+                  Save Monitoring Settings
+                </Button>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">
                   Plan Details
                 </Text>
 
@@ -186,13 +276,9 @@ export default function Settings() {
 
                   <Text as="p">
                     <Text as="span" fontWeight="semibold">
-                      Check Frequency:
+                      Minimum Check Frequency:
                     </Text>{" "}
-                    {planLimits.checkIntervalMinutes === 1440
-                      ? "Daily"
-                      : planLimits.checkIntervalMinutes === 60
-                        ? "Hourly"
-                        : `Every ${planLimits.checkIntervalMinutes} minutes`}
+                    {formatInterval(planLimits.maxFrequencyAllowedMinutes)}
                   </Text>
 
                   {shop.planActivatedAt && (
