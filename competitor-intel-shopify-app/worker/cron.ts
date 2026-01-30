@@ -206,7 +206,7 @@ function isShopDueForCheck(
 }
 
 async function runScheduledChecks(): Promise<void> {
-  console.log(`\n[Cron] Running scheduled checks at ${new Date().toISOString()}`);
+  console.log(`[CRON] tick`);
 
   // Fetch all shops that have active competitors with active pages
   const shops = await prisma.shop.findMany({
@@ -230,8 +230,29 @@ async function runScheduledChecks(): Promise<void> {
   });
 
   if (shops.length === 0) {
-    console.log(`[Cron] No shops with active pages to check`);
+    console.log(`[CRON] No shops with active pages to check`);
     return;
+  }
+
+  // Log each shop's due status
+  for (const shop of shops) {
+    const effectiveInterval = Math.max(
+      shop.checkIntervalMinutes,
+      shop.maxFrequencyAllowedMinutes
+    );
+    const isDue = isShopDueForCheck(
+      shop.lastAutoCheckAt,
+      shop.checkIntervalMinutes,
+      shop.maxFrequencyAllowedMinutes
+    );
+
+    if (isDue) {
+      console.log(
+        `[CRON] Shop ${shop.id} due=true interval=${effectiveInterval} lastRun=${shop.lastAutoCheckAt?.toISOString() || "null"}`
+      );
+    } else {
+      console.log(`[CRON] Shop ${shop.id} due=false`);
+    }
   }
 
   // Filter to shops that are due for a check
@@ -244,11 +265,10 @@ async function runScheduledChecks(): Promise<void> {
   );
 
   if (dueShops.length === 0) {
-    console.log(`[Cron] No shops due for check (${shops.length} shop(s) checked, none due)`);
     return;
   }
 
-  console.log(`[Cron] ${dueShops.length} shop(s) due for check`);
+  console.log(`[CRON] ${dueShops.length} shop(s) due for check`);
 
   const scraper = new Scraper();
   await scraper.init();
@@ -263,19 +283,21 @@ async function runScheduledChecks(): Promise<void> {
         shop.maxFrequencyAllowedMinutes
       );
       console.log(
-        `\n[Cron] Shop: ${shop.shopDomain} (interval: ${effectiveInterval}min)`
+        `[CRON] Shop: ${shop.shopDomain} (interval: ${effectiveInterval}min)`
       );
 
       const result = await runShopCheck(shop.id, scraper);
       totalPages += result.pages;
       totalChanges += result.changes;
+
+      console.log(`[CRON] Shop ${shop.id} completed, updated lastAutoCheckAt`);
     }
   } finally {
     await scraper.close();
   }
 
   console.log(
-    `\n[Cron] Scheduled check complete: ${dueShops.length} shop(s), ${totalPages} pages, ${totalChanges} changes`
+    `[CRON] Scheduled check complete: ${dueShops.length} shop(s), ${totalPages} pages, ${totalChanges} changes`
   );
 }
 

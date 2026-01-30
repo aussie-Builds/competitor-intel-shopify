@@ -59,9 +59,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       checkIntervalMinutes: shop.checkIntervalMinutes,
       maxFrequencyAllowedMinutes: shop.maxFrequencyAllowedMinutes,
       effectiveInterval,
+      lastAutoCheckAt: shop.lastAutoCheckAt?.toISOString() || null,
     },
     planLimits,
     checkIntervalOptions: CHECK_INTERVAL_OPTIONS,
+    isDevMode: process.env.NODE_ENV !== "production",
   });
 };
 
@@ -105,15 +107,56 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Settings() {
-  const { shop, planLimits, checkIntervalOptions } = useLoaderData<typeof loader>();
+  const { shop, planLimits, checkIntervalOptions, isDevMode } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<{ success?: boolean; error?: string }>();
   const [alertEmail, setAlertEmail] = useState(shop.alertEmail || "");
   const [checkInterval, setCheckInterval] = useState(
     String(shop.checkIntervalMinutes)
   );
   const [saved, setSaved] = useState(false);
+  const [forceCheckStatus, setForceCheckStatus] = useState<{
+    loading: boolean;
+    message?: string;
+    success?: boolean;
+  }>({ loading: false });
 
   const isLoading = fetcher.state !== "idle";
+
+  const handleForceCheck = useCallback(async () => {
+    setForceCheckStatus({ loading: true });
+    try {
+      const response = await fetch("/api/dev/force-check", { method: "POST" });
+      const data = await response.json();
+      setForceCheckStatus({
+        loading: false,
+        message: data.message || data.error,
+        success: data.success,
+      });
+    } catch {
+      setForceCheckStatus({
+        loading: false,
+        message: "Failed to trigger force check",
+        success: false,
+      });
+    }
+  }, []);
+
+  const formatTimeAgo = (dateString: string | null): string => {
+    if (!dateString) return "Not run yet";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    if (diffMins < 1) return "Just now";
+    if (diffMins === 1) return "1 minute ago";
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours === 1) return "1 hour ago";
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return "1 day ago";
+    return `${diffDays} days ago`;
+  };
 
   const handleSaveEmail = useCallback(() => {
     const formData = new FormData();
@@ -289,10 +332,53 @@ export default function Settings() {
                       {new Date(shop.planActivatedAt).toLocaleDateString()}
                     </Text>
                   )}
+
+                  <Text as="p">
+                    <Text as="span" fontWeight="semibold">
+                      Last Automatic Check:
+                    </Text>{" "}
+                    {formatTimeAgo(shop.lastAutoCheckAt)}
+                  </Text>
                 </BlockStack>
               </BlockStack>
             </Card>
           </Layout.Section>
+
+          {isDevMode && (
+            <Layout.Section>
+              <Card>
+                <BlockStack gap="400">
+                  <Banner tone="warning">
+                    <Text as="span" fontWeight="bold">DEV ONLY</Text> - This section is only visible in development mode
+                  </Banner>
+
+                  <Text as="h2" variant="headingMd">
+                    Developer Tools
+                  </Text>
+
+                  <Divider />
+
+                  <BlockStack gap="200">
+                    <Text as="p" tone="subdued">
+                      Force the scheduler to run on the next cron tick by resetting lastAutoCheckAt.
+                    </Text>
+                    <Button
+                      onClick={handleForceCheck}
+                      loading={forceCheckStatus.loading}
+                      tone="critical"
+                    >
+                      Force Scheduler Run
+                    </Button>
+                    {forceCheckStatus.message && (
+                      <Banner tone={forceCheckStatus.success ? "success" : "critical"}>
+                        {forceCheckStatus.message}
+                      </Banner>
+                    )}
+                  </BlockStack>
+                </BlockStack>
+              </Card>
+            </Layout.Section>
+          )}
         </Layout>
       </BlockStack>
     </Page>

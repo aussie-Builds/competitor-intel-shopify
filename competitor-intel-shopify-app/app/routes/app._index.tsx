@@ -94,6 +94,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       plan: shop.plan,
       planDisplayName: getPlanDisplayName(shop.plan),
       alertEmail: shop.alertEmail,
+      lastAutoCheckAt: shop.lastAutoCheckAt?.toISOString() || null,
     },
     competitors,
     recentChanges,
@@ -191,6 +192,7 @@ export default function Dashboard() {
           totalPages={stats.totalPages}
           totalChanges={stats.totalChanges}
           plan={shop.plan}
+          lastAutoCheckAt={shop.lastAutoCheckAt}
         />
 
         <Layout>
