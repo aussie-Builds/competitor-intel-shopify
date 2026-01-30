@@ -2,16 +2,33 @@ import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { authenticate } from "~/shopify.server";
 import prisma from "~/db.server";
 
+// Dev store domain for gating dev tools
+const DEV_STORE_DOMAIN = "review-tool-demo.myshopify.com";
+
 /**
- * DEV ONLY: Force-run the scheduler for this shop immediately.
+ * Force-run the scheduler for this shop immediately.
  * This resets lastAutoCheckAt to null, making the shop due for check
  * on the next cron tick.
+ *
+ * Requires DEBUG_TOOLS=true in Render env vars.
+ * Only accessible from the dev store (review-tool-demo.myshopify.com).
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
-  // Only allow in development
-  if (process.env.NODE_ENV === "production") {
+  // Gate: Requires DEBUG_TOOLS=true env var
+  if (process.env.DEBUG_TOOLS !== "true") {
     return json(
-      { success: false, error: "This endpoint is only available in development" },
+      { success: false, error: "Dev tools not enabled" },
+      { status: 403 }
+    );
+  }
+
+  const { session } = await authenticate.admin(request);
+  const shopDomain = session.shop;
+
+  // Gate: Only allow from dev store
+  if (shopDomain !== DEV_STORE_DOMAIN) {
+    return json(
+      { success: false, error: "Dev tools not available for this store" },
       { status: 403 }
     );
   }
@@ -19,9 +36,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== "POST") {
     return json({ success: false, error: "Method not allowed" }, { status: 405 });
   }
-
-  const { session } = await authenticate.admin(request);
-  const shopDomain = session.shop;
 
   const shop = await prisma.shop.findUnique({
     where: { shopDomain },
@@ -41,7 +55,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   return json({
     success: true,
-    message: "Shop marked as due for check. Will run on next cron tick (every 5 minutes).",
+    message: "Marked due. Cron will run on next 5-min tick.",
     shopId: shop.id,
   });
 };

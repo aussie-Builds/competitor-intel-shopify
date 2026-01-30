@@ -3,7 +3,7 @@ import {
   type LoaderFunctionArgs,
   type ActionFunctionArgs,
 } from "@remix-run/node";
-import { useLoaderData, useFetcher } from "@remix-run/react";
+import { useLoaderData, useFetcher, useNavigate, useRevalidator } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -27,6 +27,10 @@ import {
 } from "~/services/billing.server";
 import { PlanSelector } from "~/components/PlanSelector";
 
+// Dev store domain for gating dev tools
+// Requires DEBUG_TOOLS=true in Render env vars
+const DEV_STORE_DOMAIN = "review-tool-demo.myshopify.com";
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
   const shopDomain = session.shop;
@@ -48,6 +52,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     shop.maxFrequencyAllowedMinutes
   );
 
+  // Dev tools visible only if DEBUG_TOOLS=true AND shop is the dev store
+  const showDevTools =
+    process.env.DEBUG_TOOLS === "true" && shopDomain === DEV_STORE_DOMAIN;
+
   return json({
     shop: {
       id: shop.id,
@@ -63,7 +71,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     },
     planLimits,
     checkIntervalOptions: CHECK_INTERVAL_OPTIONS,
-    isDevMode: process.env.NODE_ENV !== "production",
+    showDevTools,
   });
 };
 
@@ -107,8 +115,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Settings() {
-  const { shop, planLimits, checkIntervalOptions, isDevMode } = useLoaderData<typeof loader>();
+  const { shop, planLimits, checkIntervalOptions, showDevTools } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<{ success?: boolean; error?: string }>();
+  const navigate = useNavigate();
+  const revalidator = useRevalidator();
   const [alertEmail, setAlertEmail] = useState(shop.alertEmail || "");
   const [checkInterval, setCheckInterval] = useState(
     String(shop.checkIntervalMinutes)
@@ -132,14 +142,18 @@ export default function Settings() {
         message: data.message || data.error,
         success: data.success,
       });
+      // Revalidate loader data on success so Last Auto Check updates
+      if (data.success) {
+        revalidator.revalidate();
+      }
     } catch {
       setForceCheckStatus({
         loading: false,
-        message: "Failed to trigger force check",
+        message: "Failed to trigger force check. Please try again.",
         success: false,
       });
     }
-  }, []);
+  }, [revalidator]);
 
   const formatTimeAgo = (dateString: string | null): string => {
     if (!dateString) return "Not run yet";
@@ -191,7 +205,10 @@ export default function Settings() {
   }, [fetcher.data]);
 
   return (
-    <Page title="Settings">
+    <Page
+      title="Settings"
+      backAction={{ content: "Dashboard", onAction: () => navigate("/app") }}
+    >
       <BlockStack gap="500">
         {saved && (
           <Banner tone="success" onDismiss={() => setSaved(false)}>
@@ -344,31 +361,31 @@ export default function Settings() {
             </Card>
           </Layout.Section>
 
-          {isDevMode && (
+          {/* Dev Tools: Only visible when DEBUG_TOOLS=true AND shop is dev store */}
+          {showDevTools && (
             <Layout.Section>
               <Card>
                 <BlockStack gap="400">
                   <Banner tone="warning">
-                    <Text as="span" fontWeight="bold">DEV ONLY</Text> - This section is only visible in development mode
+                    <Text as="span" fontWeight="bold">Dev Tools</Text> - Only visible for dev store
                   </Banner>
 
                   <Text as="h2" variant="headingMd">
-                    Developer Tools
+                    Dev Tools
                   </Text>
 
                   <Divider />
 
-                  <BlockStack gap="200">
-                    <Text as="p" tone="subdued">
-                      Force the scheduler to run on the next cron tick by resetting lastAutoCheckAt.
-                    </Text>
+                  <BlockStack gap="300">
                     <Button
                       onClick={handleForceCheck}
                       loading={forceCheckStatus.loading}
-                      tone="critical"
                     >
                       Force Scheduler Run
                     </Button>
+                    <Text as="p" tone="subdued" variant="bodySm">
+                      Dev-only: forces next scheduled run for this shop.
+                    </Text>
                     {forceCheckStatus.message && (
                       <Banner tone={forceCheckStatus.success ? "success" : "critical"}>
                         {forceCheckStatus.message}
