@@ -5,6 +5,7 @@ import {
   Text,
   ProgressBar,
   Icon,
+  Tooltip,
 } from "@shopify/polaris";
 import {
   PersonIcon,
@@ -97,7 +98,9 @@ export function DashboardStats({
             <Text as="span" tone="subdued">
               Changes Detected
             </Text>
-            <Icon source={AlertCircleIcon} tone="subdued" />
+            <Tooltip content="Total detected changes across all monitored pages (price + content).">
+              <Icon source={AlertCircleIcon} tone="subdued" />
+            </Tooltip>
           </InlineStack>
           <Text as="p" variant="headingLg">
             {totalChanges}
@@ -115,7 +118,9 @@ export function DashboardStats({
               <Text as="span" tone="subdued">
                 Last Auto Check
               </Text>
-              <Icon source={ClockIcon} tone="subdued" />
+              <Tooltip content="Last time scheduled monitoring ran. Manual checks don't affect this.">
+                <Icon source={ClockIcon} tone="subdued" />
+              </Tooltip>
             </InlineStack>
             <Text as="p" variant="headingLg">
               {formatTimeAgo(lastAutoCheckAt)}

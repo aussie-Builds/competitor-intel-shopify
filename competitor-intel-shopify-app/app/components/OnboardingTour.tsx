@@ -50,11 +50,23 @@ export function OnboardingTour({ active, onComplete }: OnboardingTourProps) {
     }
 
     const step = TOUR_STEPS[currentStep];
+    let currentElement: HTMLElement | null = null;
 
     const findAndPositionElement = () => {
       const element = document.getElementById(step.targetId);
       if (element) {
+        // Remove highlight from previous element
+        if (currentElement && currentElement !== element) {
+          currentElement.style.removeProperty("position");
+          currentElement.style.removeProperty("z-index");
+        }
+
+        currentElement = element;
         setTargetElement(element);
+
+        // Elevate target element above overlay
+        element.style.position = "relative";
+        element.style.zIndex = "1000";
 
         // Calculate position below the element
         const rect = element.getBoundingClientRect();
@@ -93,6 +105,11 @@ export function OnboardingTour({ active, onComplete }: OnboardingTourProps) {
       clearTimeout(timeout);
       window.removeEventListener("scroll", handlePositionUpdate, true);
       window.removeEventListener("resize", handlePositionUpdate);
+      // Clean up z-index when step changes or tour ends
+      if (currentElement) {
+        currentElement.style.removeProperty("position");
+        currentElement.style.removeProperty("z-index");
+      }
     };
   }, [active, currentStep]);
 
@@ -148,7 +165,7 @@ export function OnboardingTour({ active, onComplete }: OnboardingTourProps) {
           pointerEvents: "none",
         }}
       />
-      {/* Cutout for target element */}
+      {/* Spotlight ring around target element */}
       <div
         style={{
           position: "fixed",
@@ -156,10 +173,11 @@ export function OnboardingTour({ active, onComplete }: OnboardingTourProps) {
           left: targetElement.getBoundingClientRect().left - 4,
           width: targetElement.getBoundingClientRect().width + 8,
           height: targetElement.getBoundingClientRect().height + 8,
-          backgroundColor: "white",
+          backgroundColor: "transparent",
           borderRadius: "8px",
-          boxShadow: "0 0 0 4px rgba(59, 130, 246, 0.5)",
-          zIndex: 1000,
+          border: "2px solid rgba(59, 130, 246, 0.8)",
+          boxShadow: "0 0 0 4px rgba(59, 130, 246, 0.3), 0 0 20px rgba(59, 130, 246, 0.4)",
+          zIndex: 1001,
           pointerEvents: "none",
         }}
       />
