@@ -20,6 +20,7 @@ import { DashboardStats } from "~/components/DashboardStats";
 import { CompetitorCard } from "~/components/CompetitorCard";
 import { ChangeList } from "~/components/ChangeList";
 import { AddCompetitorModal } from "~/components/AddCompetitorModal";
+import { WelcomeModal } from "~/components/WelcomeModal";
 import { useState, useCallback } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -95,6 +96,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       planDisplayName: getPlanDisplayName(shop.plan),
       alertEmail: shop.alertEmail,
       lastAutoCheckAt: shop.lastAutoCheckAt?.toISOString() || null,
+      hasSeenOnboarding: shop.hasSeenOnboarding,
     },
     competitors,
     recentChanges,
@@ -114,6 +116,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const revalidator = useRevalidator();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(
+    !shop.hasSeenOnboarding
+  );
   const [isCheckingAll, setIsCheckingAll] = useState(false);
   const [checkStatus, setCheckStatus] = useState<{
     type: "success" | "error";
@@ -121,6 +126,11 @@ export default function Dashboard() {
   } | null>(null);
 
   const canAddCompetitor = stats.totalCompetitors < stats.maxCompetitors;
+
+  const handleShowMeAround = useCallback(() => {
+    setShowWelcomeModal(false);
+    setShowAddModal(true);
+  }, []);
 
   const handleCheckAll = useCallback(async () => {
     setIsCheckingAll(true);
@@ -268,6 +278,12 @@ export default function Dashboard() {
         onClose={() => setShowAddModal(false)}
         shopId={shop.id}
         onSuccess={() => revalidator.revalidate()}
+      />
+
+      <WelcomeModal
+        open={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        onShowMeAround={handleShowMeAround}
       />
     </Page>
   );
