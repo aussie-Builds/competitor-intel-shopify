@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useFetcher } from "@remix-run/react";
+import { useFetcher, useNavigate } from "@remix-run/react";
 import {
   Modal,
   FormLayout,
@@ -15,13 +15,20 @@ interface AddCompetitorModalProps {
   onSuccess?: () => void;
 }
 
+interface CompetitorResponse {
+  success?: boolean;
+  error?: string;
+  competitor?: { id: string };
+}
+
 export function AddCompetitorModal({
   open,
   onClose,
   shopId,
   onSuccess,
 }: AddCompetitorModalProps) {
-  const fetcher = useFetcher<{ success?: boolean; error?: string }>();
+  const fetcher = useFetcher<CompetitorResponse>();
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [initialPageUrl, setInitialPageUrl] = useState("");
@@ -80,13 +87,21 @@ export function AddCompetitorModal({
     });
   }, [name, websiteUrl, initialPageUrl, shopId, fetcher]);
 
-  // Handle successful submission
+  // Handle successful submission - navigate to new competitor
   useEffect(() => {
-    if (fetcher.data?.success && fetcher.state === "idle") {
+    if (fetcher.data?.success && fetcher.state === "idle" && fetcher.data.competitor?.id) {
+      const competitorId = fetcher.data.competitor.id;
       onSuccess?.();
-      handleClose();
+      // Reset form state
+      setName("");
+      setWebsiteUrl("");
+      setInitialPageUrl("");
+      setErrors({});
+      onClose();
+      // Navigate to the new competitor detail page
+      navigate(`/app/competitors/${competitorId}`);
     }
-  }, [fetcher.data?.success, fetcher.state, handleClose, onSuccess]);
+  }, [fetcher.data, fetcher.state, navigate, onClose, onSuccess]);
 
   return (
     <Modal
