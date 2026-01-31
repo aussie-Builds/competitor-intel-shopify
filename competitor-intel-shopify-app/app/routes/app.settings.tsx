@@ -129,6 +129,11 @@ export default function Settings() {
     message?: string;
     success?: boolean;
   }>({ loading: false });
+  const [resetOnboardingStatus, setResetOnboardingStatus] = useState<{
+    loading: boolean;
+    message?: string;
+    success?: boolean;
+  }>({ loading: false });
 
   const isLoading = fetcher.state !== "idle";
 
@@ -154,6 +159,27 @@ export default function Settings() {
       });
     }
   }, [revalidator]);
+
+  const handleResetOnboarding = useCallback(async () => {
+    setResetOnboardingStatus({ loading: true });
+    try {
+      const response = await fetch("/api/shop/reset-onboarding", { method: "POST" });
+      const data = await response.json();
+      setResetOnboardingStatus({
+        loading: false,
+        message: data.success
+          ? "Onboarding reset! Refresh the dashboard to see the welcome modal."
+          : data.error || "Failed to reset onboarding",
+        success: data.success,
+      });
+    } catch {
+      setResetOnboardingStatus({
+        loading: false,
+        message: "Failed to reset onboarding. Please try again.",
+        success: false,
+      });
+    }
+  }, []);
 
   const formatTimeAgo = (dateString: string | null): string => {
     if (!dateString) return "Not run yet";
@@ -389,6 +415,25 @@ export default function Settings() {
                     {forceCheckStatus.message && (
                       <Banner tone={forceCheckStatus.success ? "success" : "critical"}>
                         {forceCheckStatus.message}
+                      </Banner>
+                    )}
+                  </BlockStack>
+
+                  <Divider />
+
+                  <BlockStack gap="300">
+                    <Button
+                      onClick={handleResetOnboarding}
+                      loading={resetOnboardingStatus.loading}
+                    >
+                      Reset Onboarding
+                    </Button>
+                    <Text as="p" tone="subdued" variant="bodySm">
+                      Dev-only: resets hasSeenOnboarding and hasCompletedTour flags.
+                    </Text>
+                    {resetOnboardingStatus.message && (
+                      <Banner tone={resetOnboardingStatus.success ? "success" : "critical"}>
+                        {resetOnboardingStatus.message}
                       </Banner>
                     )}
                   </BlockStack>

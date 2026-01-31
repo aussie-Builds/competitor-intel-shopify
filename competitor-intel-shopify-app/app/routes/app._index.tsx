@@ -21,6 +21,7 @@ import { CompetitorCard } from "~/components/CompetitorCard";
 import { ChangeList } from "~/components/ChangeList";
 import { AddCompetitorModal } from "~/components/AddCompetitorModal";
 import { WelcomeModal } from "~/components/WelcomeModal";
+import { OnboardingTour } from "~/components/OnboardingTour";
 import { useState, useCallback } from "react";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -97,6 +98,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       alertEmail: shop.alertEmail,
       lastAutoCheckAt: shop.lastAutoCheckAt?.toISOString() || null,
       hasSeenOnboarding: shop.hasSeenOnboarding,
+      hasCompletedTour: shop.hasCompletedTour,
     },
     competitors,
     recentChanges,
@@ -119,6 +121,7 @@ export default function Dashboard() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(
     !shop.hasSeenOnboarding
   );
+  const [showTour, setShowTour] = useState(false);
   const [isCheckingAll, setIsCheckingAll] = useState(false);
   const [checkStatus, setCheckStatus] = useState<{
     type: "success" | "error";
@@ -129,8 +132,13 @@ export default function Dashboard() {
 
   const handleShowMeAround = useCallback(() => {
     setShowWelcomeModal(false);
-    setShowAddModal(true);
+    setShowTour(true);
   }, []);
+
+  const handleTourComplete = useCallback(() => {
+    setShowTour(false);
+    revalidator.revalidate();
+  }, [revalidator]);
 
   const handleCheckAll = useCallback(async () => {
     setIsCheckingAll(true);
@@ -213,9 +221,20 @@ export default function Dashboard() {
                   <Text as="h2" variant="headingMd">
                     Competitors
                   </Text>
-                  {!canAddCompetitor && (
-                    <Badge tone="warning">Limit reached</Badge>
-                  )}
+                  <InlineStack gap="200">
+                    {!canAddCompetitor && (
+                      <Badge tone="warning">Limit reached</Badge>
+                    )}
+                    <div id="btn-add-competitor">
+                      <Button
+                        onClick={() => setShowAddModal(true)}
+                        disabled={!canAddCompetitor}
+                        size="slim"
+                      >
+                        Add Competitor
+                      </Button>
+                    </div>
+                  </InlineStack>
                 </InlineStack>
 
                 {competitors.length === 0 ? (
@@ -285,6 +304,8 @@ export default function Dashboard() {
         onClose={() => setShowWelcomeModal(false)}
         onShowMeAround={handleShowMeAround}
       />
+
+      <OnboardingTour active={showTour} onComplete={handleTourComplete} />
     </Page>
   );
 }

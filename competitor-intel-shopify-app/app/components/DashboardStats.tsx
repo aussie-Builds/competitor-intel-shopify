@@ -108,22 +108,24 @@ export function DashboardStats({
         </BlockStack>
       </Card>
 
-      <Card>
-        <BlockStack gap="200">
-          <InlineStack align="space-between">
-            <Text as="span" tone="subdued">
-              Last Auto Check
+      <div id="card-last-auto-check">
+        <Card>
+          <BlockStack gap="200">
+            <InlineStack align="space-between">
+              <Text as="span" tone="subdued">
+                Last Auto Check
+              </Text>
+              <Icon source={ClockIcon} tone="subdued" />
+            </InlineStack>
+            <Text as="p" variant="headingLg">
+              {formatTimeAgo(lastAutoCheckAt)}
             </Text>
-            <Icon source={ClockIcon} tone="subdued" />
-          </InlineStack>
-          <Text as="p" variant="headingLg">
-            {formatTimeAgo(lastAutoCheckAt)}
-          </Text>
-          <Text as="span" tone="subdued" variant="bodySm">
-            Scheduled monitoring
-          </Text>
-        </BlockStack>
-      </Card>
+            <Text as="span" tone="subdued" variant="bodySm">
+              Scheduled monitoring
+            </Text>
+          </BlockStack>
+        </Card>
+      </div>
     </InlineStack>
   );
 }
