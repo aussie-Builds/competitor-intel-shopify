@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useFetcher, useNavigate } from "@remix-run/react";
 import {
   Modal,
@@ -29,6 +29,7 @@ export function AddCompetitorModal({
 }: AddCompetitorModalProps) {
   const fetcher = useFetcher<CompetitorResponse>();
   const navigate = useNavigate();
+  const hasHandledSuccess = useRef(false);
   const [name, setName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [initialPageUrl, setInitialPageUrl] = useState("");
@@ -89,19 +90,30 @@ export function AddCompetitorModal({
 
   // Handle successful submission - navigate to new competitor
   useEffect(() => {
-    if (fetcher.data?.success && fetcher.state === "idle" && fetcher.data.competitor?.id) {
+    if (
+      fetcher.data?.success &&
+      fetcher.state === "idle" &&
+      fetcher.data.competitor?.id &&
+      !hasHandledSuccess.current
+    ) {
+      hasHandledSuccess.current = true;
       const competitorId = fetcher.data.competitor.id;
       onSuccess?.();
-      // Reset form state
-      setName("");
-      setWebsiteUrl("");
-      setInitialPageUrl("");
-      setErrors({});
-      onClose();
-      // Navigate to the new competitor detail page
-      navigate(`/app/competitors/${competitorId}`);
+      // Close modal properly (resets form state + triggers Polaris cleanup)
+      handleClose();
+      // Delay navigation to allow modal backdrop/focus-trap to fully unmount
+      requestAnimationFrame(() => {
+        navigate(`/app/competitors/${competitorId}`);
+      });
     }
-  }, [fetcher.data, fetcher.state, navigate, onClose, onSuccess]);
+  }, [fetcher.data, fetcher.state, navigate, handleClose, onSuccess]);
+
+  // Reset the guard when modal opens (for subsequent submissions)
+  useEffect(() => {
+    if (open) {
+      hasHandledSuccess.current = false;
+    }
+  }, [open]);
 
   return (
     <Modal
