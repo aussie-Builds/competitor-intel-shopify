@@ -53,7 +53,17 @@ CHANGE STATISTICS:
 - Lines removed: ${diff.removedCount}
 - Change ratio: ${(diff.changeRatio * 100).toFixed(1)}%${priceContext}
 
-Provide a concise analysis covering:
+IMPORTANT: Start your response with a QUICK INSIGHT section, then provide detailed analysis.
+
+Format your response exactly like this:
+
+QUICK INSIGHT:
+- Verdict: (max 12 words summarizing what happened)
+- Significance: LOW/MEDIUM/HIGH
+- Next step: (max 16 words suggesting what to consider)
+
+DETAILED ANALYSIS:
+
 1. WHAT CHANGED: Brief summary of the actual changes
 2. WHAT IT MEANS: Strategic implications (new products, pricing changes, messaging shifts, etc.)
 3. SIGNIFICANCE: Rate as HIGH, MEDIUM, or LOW with brief justification
@@ -135,7 +145,17 @@ PRICE CHANGE DETECTED:
 - Change percent: ${priceDelta.deltaPercent !== null ? `${Math.abs(priceDelta.deltaPercent).toFixed(1)}%` : "unknown"}
 ${currency ? `- Currency: ${currency}` : ""}
 
-Provide a concise analysis covering:
+IMPORTANT: Start your response with a QUICK INSIGHT section, then provide detailed analysis.
+
+Format your response exactly like this:
+
+QUICK INSIGHT:
+- Verdict: (max 12 words summarizing the price change)
+- Significance: LOW/MEDIUM/HIGH
+- Next step: (max 16 words suggesting what to consider)
+
+DETAILED ANALYSIS:
+
 1. WHAT CHANGED: Summarize the price change
 2. WHAT IT MIGHT MEAN: Possible reasons for this price change (market conditions, competitive pressure, cost changes, promotions, etc.)
 3. SIGNIFICANCE: Rate as HIGH, MEDIUM, or LOW based on the magnitude and likely strategic importance
