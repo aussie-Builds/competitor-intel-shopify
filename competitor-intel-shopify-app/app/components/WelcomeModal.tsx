@@ -68,6 +68,10 @@ export function WelcomeModal({
             <List.Item>Get AI-powered change summaries</List.Item>
             <List.Item>Receive email alerts for significant updates</List.Item>
           </List>
+          <Text as="p" tone="subdued" variant="bodySm">
+            We capture text and HTML snapshots to detect changes. Visual
+            screenshots coming soon.
+          </Text>
         </BlockStack>
       </Modal.Section>
     </Modal>

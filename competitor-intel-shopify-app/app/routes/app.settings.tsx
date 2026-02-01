@@ -296,6 +296,8 @@ export default function Settings() {
                 </Text>
                 <Text as="p" tone="subdued">
                   Choose how often we check your competitors' pages for changes.
+                  We capture text/HTML snapshots to detect updates. Visual
+                  screenshots coming soon.
                 </Text>
 
                 <Divider />

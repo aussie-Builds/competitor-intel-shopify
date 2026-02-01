@@ -81,7 +81,9 @@ export function DashboardStats({
             <Text as="span" tone="subdued">
               Pages Monitored
             </Text>
-            <Icon source={PageIcon} tone="subdued" />
+            <Tooltip content="We capture text/HTML snapshots to detect changes. Visual screenshots coming soon.">
+              <Icon source={PageIcon} tone="subdued" />
+            </Tooltip>
           </InlineStack>
           <Text as="p" variant="headingLg">
             {totalPages}

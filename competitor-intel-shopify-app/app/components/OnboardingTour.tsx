@@ -14,13 +14,13 @@ const TOUR_STEPS: TourStep[] = [
     targetId: "btn-add-competitor",
     title: "Add Your First Competitor",
     content:
-      "Click here to add a competitor. Enter their name and website URL, and we'll start monitoring their pages for changes.",
+      "Click here to add a competitor. Enter their name and website URL, and we'll start capturing snapshots to detect changes.",
   },
   {
     targetId: "card-last-auto-check",
     title: "Automatic Monitoring",
     content:
-      "We automatically check your competitors' pages on a schedule. You'll see when the last check ran here. Configure the frequency in Settings.",
+      "We automatically capture text/HTML snapshots on a schedule to detect changes. Configure the frequency in Settings.",
   },
 ];
 
