@@ -38,13 +38,53 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
 
   if (request.method === "PUT") {
     const body = await request.json();
-    const { label, active } = body;
+    const { label, active, url } = body;
+
+    // If URL is being updated, validate it
+    if (url !== undefined) {
+      const trimmedUrl = url.trim();
+
+      // Validate URL is a valid absolute URL
+      try {
+        const parsedUrl = new URL(trimmedUrl);
+        if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+          return json(
+            { success: false, error: "URL must use http or https protocol" },
+            { status: 400 }
+          );
+        }
+      } catch {
+        return json(
+          { success: false, error: "Please enter a valid URL" },
+          { status: 400 }
+        );
+      }
+
+      // Check for duplicate URL under the same competitor (excluding current page)
+      if (trimmedUrl !== page.url) {
+        const existingPage = await prisma.page.findFirst({
+          where: {
+            competitorId: page.competitorId,
+            url: trimmedUrl,
+            id: { not: pageId },
+          },
+        });
+
+        if (existingPage) {
+          return json(
+            { success: false, error: "This URL is already being monitored for this competitor" },
+            { status: 400 }
+          );
+        }
+      }
+    }
 
     const updatedPage = await prisma.page.update({
       where: { id: pageId },
       data: {
         ...(label !== undefined && { label }),
         ...(active !== undefined && { active }),
+        ...(url !== undefined && { url: url.trim() }),
       },
     });
 

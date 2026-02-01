@@ -15,13 +15,14 @@ import {
   EmptyState,
   Icon,
 } from "@shopify/polaris";
-import { DeleteIcon } from "@shopify/polaris-icons";
+import { DeleteIcon, EditIcon } from "@shopify/polaris-icons";
 import { useState, useCallback } from "react";
 import { authenticate } from "~/shopify.server";
 import prisma from "~/db.server";
 import { getPlanLimits } from "~/services/billing.server";
 import { ChangeList } from "~/components/ChangeList";
 import { AddPageModal } from "~/components/AddPageModal";
+import { EditPageModal } from "~/components/EditPageModal";
 import { formatTimeAgo } from "~/utils/time";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
@@ -91,6 +92,11 @@ export default function CompetitorDetail() {
   const navigate = useNavigate();
   const revalidator = useRevalidator();
   const [showAddPageModal, setShowAddPageModal] = useState(false);
+  const [editingPage, setEditingPage] = useState<{
+    id: string;
+    url: string;
+    label: string;
+  } | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [checkStatus, setCheckStatus] = useState<{
     type: "success" | "error";
@@ -163,13 +169,21 @@ export default function CompetitorDetail() {
     ) : (
       <Badge>Paused</Badge>
     ),
-    <Button
-      variant="plain"
-      tone="critical"
-      icon={<Icon source={DeleteIcon} />}
-      onClick={() => handleDeletePage(page.id, page.label)}
-      accessibilityLabel={`Delete ${page.label}`}
-    />,
+    <InlineStack gap="100">
+      <Button
+        variant="plain"
+        icon={<Icon source={EditIcon} />}
+        onClick={() => setEditingPage({ id: page.id, url: page.url, label: page.label })}
+        accessibilityLabel={`Edit ${page.label}`}
+      />
+      <Button
+        variant="plain"
+        tone="critical"
+        icon={<Icon source={DeleteIcon} />}
+        onClick={() => handleDeletePage(page.id, page.label)}
+        accessibilityLabel={`Delete ${page.label}`}
+      />
+    </InlineStack>,
   ]);
 
   return (
@@ -317,6 +331,13 @@ export default function CompetitorDetail() {
         onClose={() => setShowAddPageModal(false)}
         competitorId={competitor.id}
         competitorName={competitor.name}
+        onSuccess={() => revalidator.revalidate()}
+      />
+
+      <EditPageModal
+        open={editingPage !== null}
+        onClose={() => setEditingPage(null)}
+        page={editingPage}
         onSuccess={() => revalidator.revalidate()}
       />
     </Page>
