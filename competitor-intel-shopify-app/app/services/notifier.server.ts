@@ -60,7 +60,7 @@ export async function sendChangeAlert(
   console.log(`[Notifier] Subject: ${subject}`);
 
   const html = generateEmailHtml(changes);
-  const fromEmail = process.env.ALERT_EMAIL_FROM || "alerts@competitor-intel.com";
+  const fromEmail = process.env.ALERT_EMAIL_FROM || "Competitor Intel <onboarding@resend.dev>";
 
   try {
     const result = await client.emails.send({
