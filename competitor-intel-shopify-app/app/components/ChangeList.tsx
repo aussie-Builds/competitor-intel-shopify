@@ -1,4 +1,5 @@
 import { Box, BlockStack, InlineStack, Text, Badge } from "@shopify/polaris";
+import { Link } from "@remix-run/react";
 
 interface Change {
   id: string;
@@ -10,6 +11,7 @@ interface Change {
     label: string;
     url: string;
     competitor: {
+      id: string;
       name: string;
     };
   };
@@ -55,43 +57,61 @@ export function ChangeList({
     }
   };
 
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength).trim() + "...";
+  };
+
   return (
     <BlockStack gap="300">
       {changes.map((change) => (
-        <Box
+        <Link
           key={change.id}
-          padding="300"
-          background="bg-surface-secondary"
-          borderRadius="200"
+          to={`/app/competitors/${change.page.competitor.id}`}
+          style={{ textDecoration: "none", color: "inherit", display: "block" }}
+          aria-label={`View details for ${change.page.competitor.name} - ${change.page.label}`}
         >
-          <BlockStack gap="200">
-            <InlineStack align="space-between" blockAlign="start">
-              <BlockStack gap="100">
-                {showCompetitorName && (
-                  <Text as="span" variant="headingSm">
-                    {change.page.competitor.name}
+          <Box
+            padding="300"
+            background="bg-surface-secondary"
+            borderRadius="200"
+          >
+            <div style={{ cursor: "pointer" }}>
+              <BlockStack gap="200">
+                <InlineStack align="space-between" blockAlign="start">
+                  <BlockStack gap="100">
+                    {showCompetitorName && (
+                      <Text as="span" variant="headingSm">
+                        {change.page.competitor.name}
+                      </Text>
+                    )}
+                    <Text as="span" tone="subdued" variant="bodySm">
+                      {change.page.label}
+                    </Text>
+                  </BlockStack>
+                  <InlineStack gap="200">
+                    <Badge tone={getSignificanceTone(change.significance)}>
+                      {change.significance}
+                    </Badge>
+                    <Text as="span" tone="subdued" variant="bodySm">
+                      {formatDate(change.detectedAt)}
+                    </Text>
+                  </InlineStack>
+                </InlineStack>
+                {change.changeSummary && (
+                  <Text as="p" variant="bodySm">
+                    {change.changeSummary}
                   </Text>
                 )}
-                <Text as="span" tone="subdued" variant="bodySm">
-                  {change.page.label}
-                </Text>
+                {change.aiAnalysis && (
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {truncateText(change.aiAnalysis, 140)}
+                  </Text>
+                )}
               </BlockStack>
-              <InlineStack gap="200">
-                <Badge tone={getSignificanceTone(change.significance)}>
-                  {change.significance}
-                </Badge>
-                <Text as="span" tone="subdued" variant="bodySm">
-                  {formatDate(change.detectedAt)}
-                </Text>
-              </InlineStack>
-            </InlineStack>
-            {change.changeSummary && (
-              <Text as="p" variant="bodySm">
-                {change.changeSummary}
-              </Text>
-            )}
-          </BlockStack>
-        </Box>
+            </div>
+          </Box>
+        </Link>
       ))}
     </BlockStack>
   );
