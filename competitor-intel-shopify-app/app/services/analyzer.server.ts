@@ -126,6 +126,29 @@ export async function analyzePriceChange(
     };
   }
 
+  // First-time price detection (baseline established, not a change)
+  const isFirstDetection = priceDelta.oldPrice === null && priceDelta.newPrice !== null;
+
+  if (isFirstDetection) {
+    const baselineAnalysis = `QUICK INSIGHT:
+- Verdict: Price detected (baseline established)
+- Significance: LOW
+- Next step: Re-check to confirm stability before comparing future changes
+
+DETAILED ANALYSIS:
+
+1. WHAT HAPPENED: First successful price extraction for this page. Detected price: $${priceDelta.newPrice!.toFixed(2)}${currency ? ` ${currency}` : ""}.
+
+2. WHAT IT MEANS: This is not a price change - it's the initial baseline. Future checks will compare against this value.
+
+3. SIGNIFICANCE: LOW - No actionable change yet; this establishes the reference point.
+
+4. NEXT STEPS: Monitor for actual price changes in subsequent checks.`;
+
+    console.log(`[Analyzer] First-time price detection - returning baseline analysis`);
+    return { analysis: baselineAnalysis, significance: "low" };
+  }
+
   const directionText = priceDelta.direction === "increase"
     ? "increased"
     : priceDelta.direction === "decrease"
