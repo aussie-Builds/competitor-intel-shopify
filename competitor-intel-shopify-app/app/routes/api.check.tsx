@@ -57,6 +57,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       const result = await checkPage(pageId, { simulatedPrice });
 
+      // Update shop's last checked timestamp for consistent display
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: { lastAutoCheckAt: new Date() },
+      });
+
       return json({
         success: true,
         result: {
@@ -95,6 +101,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       const result = await checkCompetitor(competitorId);
 
+      // Update shop's last checked timestamp for consistent display
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: { lastAutoCheckAt: new Date() },
+      });
+
       return json({
         success: true,
         result: {
@@ -132,6 +144,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       totalChecked += result.checked;
       totalChanges += result.changes;
     }
+
+    // Update shop's last checked timestamp for consistent display
+    await prisma.shop.update({
+      where: { id: shop.id },
+      data: { lastAutoCheckAt: new Date() },
+    });
 
     return json({
       success: true,

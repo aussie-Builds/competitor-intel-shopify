@@ -118,9 +118,9 @@ export function DashboardStats({
           <BlockStack gap="200">
             <InlineStack align="space-between">
               <Text as="span" tone="subdued">
-                Last Auto Check
+                Last Checked
               </Text>
-              <Tooltip content="Last time scheduled monitoring ran. Manual checks don't affect this.">
+              <Tooltip content="Last time pages were checked, either manually or by scheduled monitoring.">
                 <Icon source={ClockIcon} tone="subdued" />
               </Tooltip>
             </InlineStack>
@@ -128,7 +128,7 @@ export function DashboardStats({
               {formatTimeAgo(lastAutoCheckAt)}
             </Text>
             <Text as="span" tone="subdued" variant="bodySm">
-              Scheduled monitoring
+              Manual or scheduled
             </Text>
           </BlockStack>
         </Card>
