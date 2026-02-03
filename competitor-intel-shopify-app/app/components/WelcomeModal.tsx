@@ -69,8 +69,7 @@ export function WelcomeModal({
             <List.Item>Receive email alerts for significant updates</List.Item>
           </List>
           <Text as="p" tone="subdued" variant="bodySm">
-            We capture text and HTML snapshots to detect changes. Visual
-            screenshots coming soon.
+            This beta focuses on reliable change detection and timely alerts.
           </Text>
         </BlockStack>
       </Modal.Section>
