@@ -20,12 +20,10 @@ import { useState, useCallback, useEffect } from "react";
 import { authenticate } from "~/shopify.server";
 import prisma from "~/db.server";
 import {
-  getPlanDisplayName,
   getPlanLimits,
   CHECK_INTERVAL_OPTIONS,
   getEffectiveIntervalMinutes,
 } from "~/services/billing.server";
-import { PlanSelector } from "~/components/PlanSelector";
 
 // Dev store domain for gating dev tools
 // Requires DEBUG_TOOLS=true in Render env vars
@@ -61,9 +59,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       id: shop.id,
       shopDomain: shop.shopDomain,
       plan: shop.plan,
-      planDisplayName: getPlanDisplayName(shop.plan),
       alertEmail: shop.alertEmail,
-      planActivatedAt: shop.planActivatedAt?.toISOString() || null,
       checkIntervalMinutes: shop.checkIntervalMinutes,
       maxFrequencyAllowedMinutes: shop.maxFrequencyAllowedMinutes,
       effectiveInterval,
@@ -247,9 +243,17 @@ export default function Settings() {
             <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">
-                  Your Plan
+                  Beta Access
                 </Text>
-                <PlanSelector currentPlan={shop.plan} />
+                <Text as="p" tone="subdued">
+                  You're part of our beta program. During this period, you have
+                  full access to all features while we refine the product based
+                  on your feedback.
+                </Text>
+                <Text as="p" tone="subdued">
+                  Pricing plans will be introduced after the beta period ends.
+                  We'll notify you in advance of any changes.
+                </Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -309,16 +313,10 @@ export default function Settings() {
                   onChange={setCheckInterval}
                   helpText={
                     isIntervalLimited
-                      ? `Your ${shop.planDisplayName} plan allows a minimum of ${formatInterval(shop.maxFrequencyAllowedMinutes)}. Effective interval: ${formatInterval(shop.effectiveInterval)}`
+                      ? `Current minimum frequency: ${formatInterval(shop.maxFrequencyAllowedMinutes)}. Effective interval: ${formatInterval(shop.effectiveInterval)}`
                       : `Pages will be checked ${formatInterval(selectedIntervalNum).toLowerCase()}`
                   }
                 />
-
-                {isIntervalLimited && (
-                  <Banner tone="info">
-                    Upgrade your plan to unlock more frequent monitoring.
-                  </Banner>
-                )}
 
                 <Button
                   onClick={handleSaveInterval}
@@ -335,17 +333,10 @@ export default function Settings() {
             <Card>
               <BlockStack gap="400">
                 <Text as="h2" variant="headingMd">
-                  Plan Details
+                  Account Limits
                 </Text>
 
                 <BlockStack gap="200">
-                  <Text as="p">
-                    <Text as="span" fontWeight="semibold">
-                      Current Plan:
-                    </Text>{" "}
-                    {shop.planDisplayName}
-                  </Text>
-
                   <Text as="p">
                     <Text as="span" fontWeight="semibold">
                       Max Competitors:
@@ -368,15 +359,6 @@ export default function Settings() {
                     </Text>{" "}
                     {formatInterval(planLimits.maxFrequencyAllowedMinutes)}
                   </Text>
-
-                  {shop.planActivatedAt && (
-                    <Text as="p">
-                      <Text as="span" fontWeight="semibold">
-                        Plan Activated:
-                      </Text>{" "}
-                      {new Date(shop.planActivatedAt).toLocaleDateString()}
-                    </Text>
-                  )}
 
                   <Text as="p">
                     <Text as="span" fontWeight="semibold">
