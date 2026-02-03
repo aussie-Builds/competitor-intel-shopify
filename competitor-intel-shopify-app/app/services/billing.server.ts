@@ -6,6 +6,12 @@ export interface PlanLimits {
 }
 
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
+  beta: {
+    maxCompetitors: 5,
+    maxPagesPerCompetitor: 10,
+    checkIntervalMinutes: 360, // Every 6 hours (default display)
+    maxFrequencyAllowedMinutes: 360, // 6 hours minimum
+  },
   starter: {
     maxCompetitors: 3,
     maxPagesPerCompetitor: 5,
@@ -42,7 +48,7 @@ export function getEffectiveIntervalMinutes(
 }
 
 export function getPlanLimits(plan: string): PlanLimits {
-  return PLAN_LIMITS[plan.toLowerCase()] || PLAN_LIMITS.starter;
+  return PLAN_LIMITS[plan.toLowerCase()] || PLAN_LIMITS.beta;
 }
 
 export function canAddCompetitor(
@@ -63,18 +69,20 @@ export function canAddPage(
 
 export function getPlanDisplayName(plan: string): string {
   const names: Record<string, string> = {
+    beta: "Beta Access",
     starter: "Starter",
     pro: "Pro",
     business: "Business",
   };
-  return names[plan.toLowerCase()] || "Starter";
+  return names[plan.toLowerCase()] || "Beta Access";
 }
 
 export function getPlanPrice(plan: string): number {
   const prices: Record<string, number> = {
+    beta: 0,
     starter: 29,
     pro: 79,
     business: 149,
   };
-  return prices[plan.toLowerCase()] || 29;
+  return prices[plan.toLowerCase()] || 0;
 }

@@ -28,7 +28,7 @@ model Session {
 model Shop {
   id                       String       @id @default(uuid())
   shopDomain               String       @unique
-  plan                     String       @default("starter")
+  plan                     String       @default("beta")
   planActivatedAt          DateTime?
   alertEmail               String?
   checkIntervalMinutes     Int          @default(360) // User-selected interval, default 6 hours
